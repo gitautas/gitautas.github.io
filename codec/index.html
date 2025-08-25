@@ -437,6 +437,8 @@
       }
     }
 
+    let isManualLevelSelection = false;
+
     function updateSuggestedLevelDisplay(suggestedName) {
       if (suggestedLevelDiv) {
         if (suggestedName === 'N/A') {
@@ -451,7 +453,9 @@
       if (suggestedName !== 'N/A') {
         const suggestedLevelObject = codecData.h264.levels.find(l => l.name === suggestedName);
         if (suggestedLevelObject) {
-          levelSelect.value = suggestedLevelObject.idc;
+          if (!isManualLevelSelection) {
+            levelSelect.value = suggestedLevelObject.idc;
+          }
           const selectedOption = Array.from(levelSelect.options).find(opt => opt.value === suggestedLevelObject.idc);
           if (selectedOption) {
             selectedOption.classList.add('suggested-level');
@@ -919,6 +923,7 @@
     }
 
     codecSelect.addEventListener('change', () => {
+      isManualLevelSelection = false;
       updateProfileAndLevelOptions();
       handleVideoParameterChange();
     });
@@ -929,6 +934,7 @@
     });
 
     levelSelect.addEventListener('change', () => {
+      isManualLevelSelection = true;
       generateProfileLevelId();
       handleVideoParameterChange();
     });
