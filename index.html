@@ -812,6 +812,9 @@
         if (!isUpdate) realTestResultDiv.innerHTML = 'Could not retrieve outbound video stats.';
         return;
       }
+      
+      // Check smoothness using receiver stats (which contain freeze/pause metrics)
+      const isSmooth = receiverStats ? checkStreamSmooth(receiverStats) : true;
 
       if (isUpdate) {
         updateExistingStats(videoStats, receiverStats, isSmooth);
