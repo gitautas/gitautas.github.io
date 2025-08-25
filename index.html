@@ -662,9 +662,6 @@
 
       codecList = codecList.filter(codec => codec.mimeType.includes(`video/${currentCodec}`));
 
-      console.log(currentCodec);
-      console.log(codecList);
-
       pc1 = new RTCPeerConnection();
       pc2 = new RTCPeerConnection();
 
@@ -813,7 +810,6 @@
         return;
       }
       
-      // Check smoothness using receiver stats (which contain freeze/pause metrics)
       const isSmooth = receiverStats ? checkStreamSmooth(receiverStats) : true;
 
       if (isUpdate) {
