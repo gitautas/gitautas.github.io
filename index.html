@@ -1,966 +1,214 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WebRTC Codec Tool</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            primary: '#3b82f6',
-            secondary: '#10b981',
-            surface: '#1e293b',
-            background: '#0f172a',
-            border: '#334155',
-          }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ENTER IF YOU DARE</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            color: #0f0;
+            font-family: monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            cursor: crosshair;
         }
-      }
-    }
-  </script>
-  <style>
-    select option.suggested-level {
-      background-color: #2563eb;
-      color: white;
-    }
-  </style>
+        
+        .container {
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 2rem;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            animation: glitch 1s infinite alternate;
+        }
+        
+        .codec-link {
+            display: inline-block;
+            color: #ff00ff;
+            text-decoration: none;
+            font-size: 1.5rem;
+            padding: 10px 20px;
+            border: 2px solid #ff00ff;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+            text-transform: uppercase;
+        }
+        
+        .codec-link:hover {
+            background-color: #ff00ff;
+            color: #000;
+            transform: scale(1.1);
+        }
+        
+        .codec-link:before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 2px;
+            background-color: #ff00ff;
+            animation: slideLine 2s infinite;
+        }
+        
+        .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .particle {
+            position: absolute;
+            background-color: #0f0;
+            width: 2px;
+            height: 2px;
+            border-radius: 50%;
+            animation: float 3s infinite linear;
+        }
+        
+        .warning {
+            position: absolute;
+            top: 0px;
+            font-size: 0.8rem;
+            opacity: 0.7;
+            animation: blink 2s infinite;
+        }
+        
+        @keyframes glitch {
+            0% {
+                text-shadow: 2px 0 0 red, -2px 0 0 blue;
+                transform: translate(0);
+            }
+            25% {
+                text-shadow: -2px 0 0 red, 2px 0 0 blue;
+                transform: translate(1px, 1px);
+            }
+            50% {
+                text-shadow: 2px 0 0 red, -2px 0 0 blue;
+                transform: translate(-1px, -1px);
+            }
+            75% {
+                text-shadow: -2px 0 0 red, 2px 0 0 blue;
+                transform: translate(-1px, 1px);
+            }
+            100% {
+                text-shadow: 2px 0 0 red, -2px 0 0 blue;
+                transform: translate(1px, -1px);
+            }
+        }
+        
+        @keyframes slideLine {
+            0% {
+                left: -100%;
+            }
+            50% {
+                left: 100%;
+            }
+            100% {
+                left: 100%;
+            }
+        }
+        
+        @keyframes float {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+        
+        @keyframes blink {
+            0%, 100% {
+                opacity: 0.7;
+            }
+            50% {
+                opacity: 0.3;
+            }
+        }
+    </style>
 </head>
-
-<body class="bg-background text-slate-200 p-3 text-sm font-sans">
-  <div class="flex flex-wrap lg:flex-nowrap gap-5 justify-center">
-    <div class="flex-1 min-w-[250px]">
-      <pre id="sdp-diff"
-        class="bg-surface p-3 rounded text-xs font-mono whitespace-pre-wrap break-all text-gray-400 min-h-full overflow-auto"><div class="font-semibold mb-2 text-primary">SDP Diff (Offer → Answer)</div>Run a test to see the SDP difference between offer and answer.</pre>
+<body>
+    <div class="particles" id="particles"></div>
+    
+    <div class="container">
+        <h1>Buongiorno >w<</h1>
+        <a href="codec/index.html" class="codec-link">Codec Thing</a>
+        <br><br>
+        <p class="warning">vibe coded emporium</p>
     </div>
-    <div class="w-full max-w-4xl bg-surface p-5 rounded border border-border shadow">
-      <h1 class="text-primary text-center mb-5 font-bold text-xl">WebRTC Codec Tool</h1>
-
-      <div class="grid md:grid-cols-2 gap-3">
-        <div class="mb-3">
-          <label for="codec" class="block mb-1 font-medium text-sm">Codec</label>
-          <select id="codec"
-            class="w-full p-2 rounded border border-border bg-background text-slate-200 focus:border-primary focus:ring focus:ring-primary/20 focus:outline-none">
-            <option value="h264">H.264</option>
-            <option value="hevc">HEVC (H.265)</option>
-            <option value="vp8">VP8</option>
-            <option value="vp9">VP9</option>
-            <option value="av1">AV1</option>
-          </select>
-        </div>
-
-        <div class="mb-3">
-          <label for="profile" class="block mb-1 font-medium text-sm">Profile</label>
-          <select id="profile"
-            class="w-full p-2 rounded border border-border bg-background text-slate-200 focus:border-primary focus:ring focus:ring-primary/20 focus:outline-none"></select>
-        </div>
-
-        <div class="mb-3">
-          <label for="level" class="block mb-1 font-medium text-sm">Level</label>
-          <select id="level"
-            class="w-full p-2 rounded border border-border bg-background text-slate-200 focus:border-primary focus:ring focus:ring-primary/20 focus:outline-none"></select>
-          <div id="suggestedLevel" class="text-secondary font-medium text-xs mt-1"></div>
-        </div>
-
-        <div class="mb-3" id="framerate-group">
-          <label for="framerate" class="block mb-1 font-medium text-sm">Framerate (fps)</label>
-          <input type="number" id="framerate" value="30"
-            class="w-full p-2 rounded border border-border bg-background text-slate-200 focus:border-primary focus:ring focus:ring-primary/20 focus:outline-none">
-        </div>
-
-        <div class="mb-3 col-span-full">
-          <fieldset>
-            <legend class="block mb-1 font-medium text-sm">Resolution</legend>
-            <div class="flex flex-wrap gap-2 mt-2">
-              <button type="button"
-                class="resolution-btn flex-1 p-1 px-2 bg-surface border border-border rounded text-xs text-center hover:border-primary focus:outline-none"
-                data-width="480" data-height="360">360p</button>
-              <button type="button"
-                class="resolution-btn flex-1 p-1 px-2 bg-surface border border-border rounded text-xs text-center hover:border-primary focus:outline-none"
-                data-width="640" data-height="480">480p</button>
-              <button type="button"
-                class="resolution-btn flex-1 p-1 px-2 bg-surface border border-border rounded text-xs text-center hover:border-primary focus:outline-none"
-                data-width="1280" data-height="720">720p</button>
-              <button type="button"
-                class="resolution-btn flex-1 p-1 px-2 bg-primary border border-primary rounded text-xs text-white text-center focus:outline-none"
-                data-width="1920" data-height="1080">1080p</button>
-              <button type="button"
-                class="resolution-btn flex-1 p-1 px-2 bg-surface border border-border rounded text-xs text-center hover:border-primary focus:outline-none"
-                data-width="3840" data-height="2160">4K</button>
-            </div>
-          </fieldset>
-        </div>
-
-        <div class="mb-3">
-          <label for="width" class="block mb-1 font-medium text-sm">Width (px)</label>
-          <input type="number" id="width" value="1920"
-            class="w-full p-2 rounded border border-border bg-background text-slate-200 focus:border-primary focus:ring focus:ring-primary/20 focus:outline-none">
-        </div>
-
-        <div class="mb-3">
-          <label for="height" class="block mb-1 font-medium text-sm">Height (px)</label>
-          <input type="number" id="height" value="1080"
-            class="w-full p-2 rounded border border-border bg-background text-slate-200 focus:border-primary focus:ring focus:ring-primary/20 focus:outline-none">
-        </div>
-
-        <div class="mb-3">
-          <label for="bitrate" class="block mb-1 font-medium text-sm">Calculated Bitrate (bps)</label>
-          <input type="text" id="bitrate" readonly
-            class="w-full p-2 rounded border border-border bg-background text-slate-200">
-        </div>
-
-        <div class="mb-3">
-          <label class="block mb-1 font-medium text-sm">profile-level-id</label>
-          <div id="result" class="p-2 rounded border border-border bg-background text-slate-200 min-h-[35px]">Waiting
-            for input...</div>
-        </div>
-
-        <div class="col-span-full mt-2">
-          <button id="runTest"
-            class="w-full bg-primary hover:bg-blue-600 text-white py-2 px-2 rounded font-medium hover:translate-y-[-1px]">Test</button>
-        </div>
-      </div>
-
-      <div class="mt-4 border-t border-border pt-4">
-        <div class="grid md:grid-cols-2 gap-4">
-          <div class="relative overflow-hidden bg-background p-4 rounded border border-border">
-            <div class="font-semibold mb-2 text-primary z-10 relative">WebRTC Test Results</div>
-            <div id="realTestResult" class="z-10 relative">Click "Test" to see results</div>
-            <video id="videoPreview" class="hidden absolute inset-0 w-full h-full object-cover opacity-30" autoplay
-              muted playsinline></video>
-          </div>
-
-          <div class="bg-background p-4 rounded border border-border">
-            <div class="font-semibold mb-2 text-primary">MediaCapabilitiesAPI Results</div>
-            <div id="capabilitiesResult">Click "Test" to see results</div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="w-[250px] p-3 rounded text-xs font-mono overflow-auto bg-surface">
-      <div class="font-semibold mb-2 text-primary">List of supported codecs:</div>
-      <div id="codec-list" class="text-slate-300 whitespace-pre-line break-words">Run a test to see the available codecs
-        for your browser.</div>
-    </div>
-  </div>
-
-  <script>
-    const codecData = {
-      h264: {
-        profiles: [
-          { name: 'Baseline', idc: '42', iop: '00' },
-          { name: 'Constrained Baseline', idc: '42', iop: '40' },
-          { name: 'Main', idc: '4D', iop: '00' },
-          { name: 'High', idc: '64', iop: '00' },
-          { name: 'High 10', idc: '6E', iop: '00' },
-          { name: 'High 4:2:2', idc: '7A', iop: '00' },
-          { name: 'High 4:4:4 Predictive', idc: 'F4', iop: '00' },
-        ],
-        levels: [
-          { name: '1', idc: '0A' },
-          { name: '1b', idc: '09' },
-          { name: '1.1', idc: '0B' },
-          { name: '1.2', idc: '0C' },
-          { name: '1.3', idc: '0D' },
-          { name: '2', idc: '14' },
-          { name: '2.1', idc: '15' },
-          { name: '2.2', idc: '16' },
-          { name: '3', idc: '1E' },
-          { name: '3.1', idc: '1F' },
-          { name: '3.2', idc: '20' },
-          { name: '4', idc: '28' },
-          { name: '4.1', idc: '29' },
-          { name: '4.2', idc: '2A' },
-          { name: '5', idc: '32' },
-          { name: '5.1', idc: '33' },
-          { name: '5.2', idc: '34' },
-          { name: '6', idc: '3C' },
-          { name: '6.1', idc: '3D' },
-          { name: '6.2', idc: '3E' },
-        ],
-        levelLimits: {
-          '1': { maxBitrate: 64, maxFps: 30.9, maxMacroblocks: 99, maxMacroblocksPerSecond: 1485 },
-          '1b': { maxBitrate: 128, maxFps: 30.9, maxMacroblocks: 99, maxMacroblocksPerSecond: 1485 },
-          '1.1': { maxBitrate: 192, maxFps: 30.3, maxMacroblocks: 396, maxMacroblocksPerSecond: 3000 },
-          '1.2': { maxBitrate: 384, maxFps: 20.0, maxMacroblocks: 396, maxMacroblocksPerSecond: 6000 },
-          '1.3': { maxBitrate: 768, maxFps: 36.0, maxMacroblocks: 396, maxMacroblocksPerSecond: 11880 },
-          '2': { maxBitrate: 2000, maxFps: 36.0, maxMacroblocks: 396, maxMacroblocksPerSecond: 11880 },
-          '2.1': { maxBitrate: 4000, maxFps: 30.0, maxMacroblocks: 792, maxMacroblocksPerSecond: 19800 },
-          '2.2': { maxBitrate: 4000, maxFps: 30.7, maxMacroblocks: 1620, maxMacroblocksPerSecond: 20250 },
-          '3': { maxBitrate: 10000, maxFps: 61.4, maxMacroblocks: 1620, maxMacroblocksPerSecond: 40500 },
-          '3.1': { maxBitrate: 14000, maxFps: 80.0, maxMacroblocks: 3600, maxMacroblocksPerSecond: 108000 },
-          '3.2': { maxBitrate: 20000, maxFps: 60.0, maxMacroblocks: 5120, maxMacroblocksPerSecond: 216000 },
-          '4': { maxBitrate: 20000, maxFps: 68.3, maxMacroblocks: 8192, maxMacroblocksPerSecond: 245760 },
-          '4.1': { maxBitrate: 50000, maxFps: 68.3, maxMacroblocks: 8192, maxMacroblocksPerSecond: 245760 },
-          '4.2': { maxBitrate: 50000, maxFps: 145.1, maxMacroblocks: 8704, maxMacroblocksPerSecond: 522240 },
-          '5': { maxBitrate: 135000, maxFps: 72.3, maxMacroblocks: 22080, maxMacroblocksPerSecond: 589824 },
-          '5.1': { maxBitrate: 240000, maxFps: 120.5, maxMacroblocks: 36864, maxMacroblocksPerSecond: 983040 },
-          '5.2': { maxBitrate: 240000, maxFps: 172.0, maxMacroblocks: 36864, maxMacroblocksPerSecond: 2073600 },
-          '6': { maxBitrate: 240000, maxFps: 128.9, maxMacroblocks: 139264, maxMacroblocksPerSecond: 8355840 },
-          '6.1': { maxBitrate: 480000, maxFps: 257.9, maxMacroblocks: 139264, maxMacroblocksPerSecond: 16711680 },
-          '6.2': { maxBitrate: 800000, maxFps: 300.0, maxMacroblocks: 139264, maxMacroblocksPerSecond: 33423360 }
+    
+    <script>
+        // Create floating particles
+        const particlesContainer = document.getElementById('particles');
+        const particleCount = 50;
+        
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.classList.add('particle');
+            
+            // Random position
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.top = Math.random() * 100 + '%';
+            
+            // Random size
+            const size = Math.random() * 3 + 1;
+            particle.style.width = size + 'px';
+            particle.style.height = size + 'px';
+            
+            // Random animation duration
+            particle.style.animationDuration = (Math.random() * 5 + 3) + 's';
+            
+            // Random delay
+            particle.style.animationDelay = (Math.random() * 5) + 's';
+            
+            particlesContainer.appendChild(particle);
         }
-      },
-      hevc: {
-        profiles: [
-          { name: 'Main', id: 1, tier: 0 },
-          { name: 'Main 10', id: 2, tier: 0 },
-          { name: 'Main Still Picture', id: 3, tier: 0 },
-          { name: 'Main 12', id: 4, tier: 0 },
-          { name: 'Main 4:2:2 10', id: 5, tier: 0 },
-          { name: 'Main 4:2:2 12', id: 6, tier: 0 },
-          { name: 'Main 4:4:4', id: 7, tier: 0 },
-          { name: 'Main 4:4:4 10', id: 8, tier: 0 },
-          { name: 'Main 4:4:4 12', id: 9, tier: 0 },
-          { name: 'Main Intra', id: 10, tier: 0 },
-          { name: 'Main 10 Intra', id: 11, tier: 0 },
-          { name: 'Main 12 Intra', id: 12, tier: 0 },
-          { name: 'Main 4:2:2 10 Intra', id: 13, tier: 0 },
-          { name: 'Main 4:2:2 12 Intra', id: 14, tier: 0 },
-          { name: 'Main 4:4:4 Intra', id: 15, tier: 0 },
-          { name: 'Main 4:4:4 10 Intra', id: 16, tier: 0 },
-          { name: 'Main 4:4:4 12 Intra', id: 17, tier: 0 },
-          { name: 'High Throughput 4:4:4 16 Intra', id: 18, tier: 0 },
-        ],
-        levels: [
-          { name: '1', id: 30 },
-          { name: '2', id: 60 },
-          { name: '2.1', id: 63 },
-          { name: '3', id: 90 },
-          { name: '3.1', id: 93 },
-          { name: '4', id: 120 },
-          { name: '4.1', id: 123 },
-          { name: '5', id: 150 },
-          { name: '5.1', id: 153 },
-          { name: '5.2', id: 156 },
-          { name: '6', id: 180 },
-          { name: '6.1', id: 183 },
-          { name: '6.2', id: 186 },
-        ]
-      },
-      vp8: {
-        profiles: [],
-        levels: []
-      },
-      vp9: {
-        profiles: [
-          { name: 'Profile 0', id: 0 },
-          { name: 'Profile 1', id: 1 },
-          { name: 'Profile 2', id: 2 },
-          { name: 'Profile 3', id: 3 },
-        ],
-        levels: []
-      },
-      av1: {
-        profiles: [
-          { name: 'Main', id: '0' },
-          { name: 'High', id: '1' },
-          { name: 'Professional', id: '2' },
-        ],
-        levels: [
-          { name: '2.0', id: '00' }, { name: '2.1', id: '01' }, { name: '2.2', id: '02' }, { name: '2.3', id: '03' },
-          { name: '3.0', id: '04' }, { name: '3.1', id: '05' }, { name: '3.2', id: '06' }, { name: '3.3', id: '07' },
-          { name: '4.0', id: '08' }, { name: '4.1', id: '09' }, { name: '4.2', id: '10' }, { name: '4.3', id: '11' },
-          { name: '5.0', id: '12' }, { name: '5.1', id: '13' }, { name: '5.2', id: '14' }, { name: '5.3', id: '15' },
-          { name: '6.0', id: '16' }, { name: '6.1', id: '17' }, { name: '6.2', id: '18' }, { name: '6.3', id: '19' },
-          { name: '7.0', id: '20' }, { name: '7.1', id: '21' }, { name: '7.2', id: '22' }, { name: '7.3', id: '23' },
-        ]
-      }
-    };
-
-    const codecSelect = document.getElementById('codec');
-    const profileSelect = document.getElementById('profile');
-    const levelSelect = document.getElementById('level');
-    const resultDiv = document.getElementById('result');
-    const widthInput = document.getElementById('width');
-    const heightInput = document.getElementById('height');
-    const framerateInput = document.getElementById('framerate');
-    const bitrateInput = document.getElementById('bitrate');
-    const runTestButton = document.getElementById('runTest');
-    const capabilitiesResultDiv = document.getElementById('capabilitiesResult');
-    const realTestResultDiv = document.getElementById('realTestResult');
-    const videoPreview = document.getElementById('videoPreview');
-    const suggestedLevelDiv = document.getElementById('suggestedLevel');
-    const resolutionToggles = document.querySelectorAll('.resolution-btn');
-    const sdpDiffPre = document.getElementById('sdp-diff');
-    const codecListPre = document.getElementById('codec-list');
-
-    let pc1, pc2, stream, statsInterval;
-    let isTestRunning = false;
-    let currentConfig = {};
-    let prevStats = {
-      totalPausesDuration: 0,
-      totalFreezesDuration: 0,
-      framesDropped: 0,
-      timestamp: 0
-    };
-
-    function cleanup() {
-      if (statsInterval) clearInterval(statsInterval);
-      if (pc1) pc1.close();
-      if (pc2) pc2.close();
-      if (stream) stream.getTracks().forEach(track => track.stop());
-      if (videoPreview) {
-        videoPreview.srcObject = null;
-        videoPreview.style.display = 'none';
-      }
-      pc1 = null;
-      pc2 = null;
-      stream = null;
-      statsInterval = null;
-      isTestRunning = false;
-      prevStats = {
-        totalPausesDuration: 0,
-        totalFreezesDuration: 0,
-        framesDropped: 0,
-        timestamp: 0
-      };
-      if (sdpDiffPre) sdpDiffPre.innerHTML = '<div class="font-semibold mb-2 text-primary">SDP Diff (Offer → Answer)</div>Run a test to see the SDP difference between offer and answer.';
-      if (codecListPre) codecListPre.innerHTML = 'Run a test to see the available codecs for your browser.';
-    }
-
-    function captureCurrentConfig() {
-      return {
-        codec: codecSelect.value,
-        profile: profileSelect.value,
-        level: levelSelect.value,
-        width: widthInput.value,
-        height: heightInput.value,
-        framerate: framerateInput.value
-      };
-    }
-
-    function handleVideoParameterChange() {
-      calculateBitrate();
-      suggestH264Level();
-      generateProfileLevelId();
-
-      if (isTestRunning) {
-        const newConfig = captureCurrentConfig();
-        const configChanged = Object.keys(currentConfig).some(key =>
-          currentConfig[key] !== newConfig[key]
-        );
-
-        if (configChanged) {
-          updateTestButton(true);
-        }
-      }
-    }
-
-    function populateOptions(selectElement, options, valueKey, nameKey) {
-      selectElement.innerHTML = '';
-      options.forEach(option => {
-        const opt = document.createElement('option');
-        opt.value = option[valueKey];
-        opt.textContent = option[nameKey];
-        selectElement.appendChild(opt);
-      });
-      selectElement.parentElement.style.display = options.length > 0 ? 'block' : 'none';
-    }
-
-    function updateProfileAndLevelOptions() {
-      const selectedCodec = codecSelect.value;
-      const framerateGroup = document.getElementById('framerate-group');
-      const codec = codecData[selectedCodec] || { profiles: [], levels: [] };
-
-      if (selectedCodec === 'h264') {
-        populateOptions(profileSelect, codec.profiles, 'idc', 'name');
-        populateOptions(levelSelect, codec.levels, 'idc', 'name');
-        framerateGroup.style.gridColumn = '';
-      } else {
-        let levelData = codec.levels;
-
-        if (selectedCodec === 'hevc' || selectedCodec === 'av1' || selectedCodec === 'vp9') {
-          levelData = [];
-        }
-
-        populateOptions(profileSelect, codec.profiles, 'id', 'name');
-        populateOptions(levelSelect, levelData, 'id', 'name');
-
-        framerateGroup.style.gridColumn = levelSelect.parentElement.style.display === 'none' ? 'span 2' : '';
-      }
-
-      handleVideoParameterChange();
-    }
-
-    function calculateBitrate() {
-      const width = parseInt(widthInput.value, 10);
-      const height = parseInt(heightInput.value, 10);
-      const framerate = parseInt(framerateInput.value, 10);
-      const bitrate = Math.round(width * height * framerate * 0.1);
-      bitrateInput.value = bitrate;
-      return bitrate;
-    }
-
-    function suggestH264Level() {
-      if (codecSelect.value !== 'h264') {
-        if (suggestedLevelDiv) suggestedLevelDiv.innerHTML = 'Not applicable for this codec';
-        clearSuggestedLevelHighlight();
-        return;
-      }
-
-      const width = parseInt(widthInput.value, 10);
-      const height = parseInt(heightInput.value, 10);
-      const framerate = parseInt(framerateInput.value, 10);
-      const bitrate = parseInt(bitrateInput.value, 10) / 1000;
-
-      const macroblocks = Math.ceil(width / 16) * Math.ceil(height / 16);
-      const macroblocksPerSecond = macroblocks * framerate;
-
-      const suggestedName = findSuitableH264Level(bitrate, macroblocks, macroblocksPerSecond, framerate);
-
-      updateSuggestedLevelDisplay(suggestedName);
-    }
-
-    function findSuitableH264Level(bitrate, macroblocks, macroblocksPerSecond, framerate) {
-      const levelOrder = ['1', '1b', '1.1', '1.2', '1.3', '2', '2.1', '2.2', '3', '3.1', '3.2', '4', '4.1', '4.2', '5', '5.1', '5.2', '6', '6.1', '6.2'];
-      const levelLimits = codecData.h264.levelLimits;
-
-      for (const levelName of levelOrder) {
-        const limits = levelLimits[levelName];
-        if (bitrate <= limits.maxBitrate &&
-          macroblocks <= limits.maxMacroblocks &&
-          macroblocksPerSecond <= limits.maxMacroblocksPerSecond &&
-          framerate <= limits.maxFps) {
-          return levelName;
-        }
-      }
-
-      return 'N/A';
-    }
-
-    function clearSuggestedLevelHighlight() {
-      for (const option of levelSelect.options) {
-        option.classList.remove('suggested-level');
-      }
-    }
-
-    function updateSuggestedLevelDisplay(suggestedName) {
-      if (suggestedLevelDiv) {
-        if (suggestedName === 'N/A') {
-          suggestedLevelDiv.innerHTML = `No suitable level found for the current parameters`;
-        } else {
-          suggestedLevelDiv.innerHTML = `Level ${suggestedName} is recommended for these parameters`;
-        }
-      }
-
-      clearSuggestedLevelHighlight();
-
-      if (suggestedName !== 'N/A') {
-        const suggestedLevelObject = codecData.h264.levels.find(l => l.name === suggestedName);
-        if (suggestedLevelObject) {
-          levelSelect.value = suggestedLevelObject.idc;
-          const selectedOption = Array.from(levelSelect.options).find(opt => opt.value === suggestedLevelObject.idc);
-          if (selectedOption) {
-            selectedOption.classList.add('suggested-level');
-          }
-        }
-      }
-    }
-
-    function generateProfileLevelId() {
-      const selectedCodec = codecSelect.value;
-      const profileId = profileSelect.value;
-
-      switch (selectedCodec) {
-        case 'h264':
-          generateH264ProfileLevelId();
-          break;
-        case 'vp8':
-          resultDiv.textContent = 'N/A';
-          break;
-        case 'hevc':
-        case 'av1':
-          resultDiv.textContent = profileId ? `Profile ID: ${profileId}` : 'N/A';
-          break;
-        case 'vp9':
-          resultDiv.textContent = profileId ? `Profile ${profileId}` : 'N/A';
-          break;
-      }
-    }
-
-    function generateH264ProfileLevelId() {
-      const profileIdc = profileSelect.value;
-      const levelIdc = levelSelect.value;
-
-      if (!profileSelect.options[profileSelect.selectedIndex] || !levelIdc) {
-        return;
-      }
-
-      const selectedProfileOption = profileSelect.options[profileSelect.selectedIndex];
-      const isConstrained = selectedProfileOption.text.includes('Constrained');
-
-      let iop = '00';
-      if (profileIdc === '42' && isConstrained) {
-        iop = '40';
-      } else {
-        const profile = codecData.h264.profiles.find(p => p.idc === profileIdc);
-        if (profile) {
-          iop = profile.iop;
-        }
-      }
-
-      const profileLevelId = `${profileIdc}${iop}${levelIdc}`;
-      resultDiv.textContent = profileLevelId;
-    }
-
-    function updateTestButton(needsRestart = false) {
-      if (needsRestart) {
-        runTestButton.textContent = 'Restart Test';
-        runTestButton.classList.remove('bg-primary');
-        runTestButton.classList.add('bg-green-500', 'hover:bg-green-600');
-      } else {
-        runTestButton.textContent = 'Test';
-        runTestButton.classList.remove('bg-green-500', 'hover:bg-green-600');
-        runTestButton.classList.add('bg-primary');
-      }
-    }
-
-    async function runTest() {
-      cleanup();
-
-      currentConfig = captureCurrentConfig();
-      isTestRunning = true;
-      updateTestButton(false);
-
-      capabilitiesResultDiv.innerHTML = 'Testing...';
-      realTestResultDiv.innerHTML = 'Waiting for MediaCapabilities check...';
-
-      const mediaCapsSuccess = await checkCapabilities();
-      if (mediaCapsSuccess) {
-        await testWithWebcam();
-      } else {
-        realTestResultDiv.innerHTML = 'Skipping Real Test because MediaCapabilities check failed or is not supported.';
-      }
-    }
-
-    async function checkCapabilities() {
-      if (!('mediaCapabilities' in navigator)) {
-        capabilitiesResultDiv.innerHTML = '<div class="flex items-center my-2"><div class="w-2 h-2 rounded-full mr-2 bg-red-500"></div><strong>Media Capabilities API not supported in this browser.</strong></div>';
-        return false;
-      }
-
-      const selectedCodec = codecSelect.value;
-      const profileLevelIdText = resultDiv.textContent.split(' ')[0];
-      let contentType;
-      let parameters;
-
-      if (selectedCodec === 'h264') {
-        contentType = `video/h264; profile-level-id=${profileLevelIdText}`;
-      } else if (selectedCodec === 'hevc') {
-        contentType = 'video/hevc';
-      } else if (selectedCodec === 'vp8') {
-        contentType = 'video/vp8';
-      } else if (selectedCodec === 'vp9') {
-        const profileId = profileSelect.value;
-        contentType = `video/vp9; profile-id=${profileId}`;
-      } else if (selectedCodec === 'av1') {
-        contentType = `video/av1; seq-profile=${profileSelect.value}`;
-      }
-
-      const videoConfig = {
-        type: 'webrtc',
-        video: {
-          contentType: contentType,
-          width: parseInt(widthInput.value, 10),
-          height: parseInt(heightInput.value, 10),
-          bitrate: parseInt(bitrateInput.value, 10),
-          framerate: parseInt(framerateInput.value, 10),
-        }
-      };
-
-      if (selectedCodec === 'av1') {
-        videoConfig.video.level = levelSelect.options[levelSelect.selectedIndex].text;
-      }
-
-      try {
-        capabilitiesResultDiv.innerHTML = '<div>Testing capabilities...</div>';
-        const result = await navigator.mediaCapabilities.encodingInfo(videoConfig);
-
-        let html = '';
-        html += `<div class="flex items-center my-2">
-                <div class="w-2 h-2 rounded-full mr-2 ${result.supported ? 'bg-secondary' : 'bg-red-500'}"></div>
-                <strong>Supported:</strong> ${result.supported ? 'Yes' : 'No'}
-            </div>`;
-
-        html += `<div class="flex items-center my-2">
-                <div class="w-2 h-2 rounded-full mr-2 ${result.smooth ? 'bg-secondary' : 'bg-red-500'}"></div>
-                <strong>Smooth:</strong> ${result.smooth ? 'Yes' : 'No'}
-            </div>`;
-
-        html += `<div class="flex items-center my-2">
-                <div class="w-2 h-2 rounded-full mr-2 ${result.powerEfficient ? 'bg-secondary' : 'bg-red-500'}"></div>
-                <strong>Power Efficient:</strong> ${result.powerEfficient ? 'Yes' : 'No'}
-            </div>`;
-
-        html += `<pre class="whitespace-pre-wrap break-all text-xs font-mono bg-black/20 p-3 rounded mt-3">${JSON.stringify(videoConfig, null, 2)}</pre>`;
-
-        capabilitiesResultDiv.innerHTML = html;
-        return true;
-      } catch (e) {
-        capabilitiesResultDiv.innerHTML = `<div class="flex items-center my-2">
-                <div class="w-2 h-2 rounded-full mr-2 bg-red-500"></div>
-                <strong>Error:</strong> ${e.toString()}
-            </div>
-            <pre class="whitespace-pre-wrap break-all text-xs font-mono bg-black/20 p-3 rounded mt-3">${JSON.stringify(videoConfig, null, 2)}</pre>`;
-        return false;
-      }
-    }
-
-    async function testWithWebcam() {
-      realTestResultDiv.innerHTML = 'Requesting webcam access...';
-
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            width: { ideal: parseInt(widthInput.value, 10) },
-            height: { ideal: parseInt(heightInput.value, 10) },
-            frameRate: { ideal: parseInt(framerateInput.value, 10) }
-          }
+        
+        // Easter egg - konami code
+        const konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+        let konamiIndex = 0;
+        
+        document.addEventListener('keydown', function(e) {
+            if (e.key === konamiCode[konamiIndex]) {
+                konamiIndex++;
+                if (konamiIndex === konamiCode.length) {
+                    document.body.style.backgroundColor = '#ff00ff';
+                    document.body.style.color = '#000';
+                    alert("YOU FOUND THE SECRET! CONGRATULATIONS ON WASTING YOUR TIME!");
+                    konamiIndex = 0;
+                }
+            } else {
+                konamiIndex = 0;
+            }
         });
-        const track = stream.getVideoTracks()[0];
-        const settings = track.getSettings();
-
-        if (videoPreview) {
-          videoPreview.srcObject = stream;
-          videoPreview.style.display = 'block';
-        }
-
-        if (settings.width && settings.height) setResolution(settings.width, settings.height);
-        if (settings.frameRate) framerateInput.value = settings.frameRate;
-        handleVideoParameterChange();
-
-        startPeerConnectionTest();
-      } catch (e) {
-        realTestResultDiv.innerHTML = createStatHTML('Supported', false, true) +
-          `<div class="flex items-center my-2"><strong>Error:</strong> Could not access webcam: ${e.toString()}</div>`;
-        cleanup();
-      }
-    }
-
-    async function startPeerConnectionTest() {
-      realTestResultDiv.innerHTML = 'Starting WebRTC test...';
-
-      const currentCodec = codecSelect.value.toUpperCase();
-      let codecList = RTCRtpSender.getCapabilities("video").codecs.filter(
-        c => !/rtx|red|ulpfec|fec/i.test(c.mimeType)
-      ).sort((a, b) => (
-        (b.mimeType.toUpperCase() === `VIDEO/${currentCodec}`) - (a.mimeType.toUpperCase() === `VIDEO/${currentCodec}`) ||
-        a.mimeType.localeCompare(b.mimeType)
-      ));
-
-      codecListPre.innerHTML = codecList.map((c) => {
-        const codecName = c.mimeType.split("/")[1];
-        const params = c.sdpFmtpLine ?
-          `<div class="text-slate-400 text-xs">${c.sdpFmtpLine.split(';').join('<br>')}</div>` :
-          '<div class="text-slate-400 text-xs">No parameters</div>';
-
-        return `<div class="${c.mimeType.toUpperCase().split("/")[1] === currentCodec ? 'bg-emerald-400/30' : ''} border border-border rounded-md p-1 m-1 mb-2"><div class="font-bold text-primary text-center">${codecName}</div>${params}</div>`;
-      }).join('');
-
-      codecList = codecList.filter(codec => codec.mimeType.includes(`video/${currentCodec}`));
-
-      pc1 = new RTCPeerConnection();
-      pc2 = new RTCPeerConnection();
-
-      pc1.onicecandidate = e => e.candidate && pc2.addIceCandidate(e.candidate);
-      pc2.onicecandidate = e => e.candidate && pc1.addIceCandidate(e.candidate);
-
-      const videoTrack = stream.getVideoTracks()[0];
-      pc1.addTrack(videoTrack, stream);
-
-      pc1.getTransceivers().forEach(transceiver => transceiver.setCodecPreferences(codecList));
-
-      try {
-        if (codecList.length === 0) throw new Error('Browser does not support the requested codec');
-
-        const offer = await pc1.createOffer();
-
-        await pc1.setLocalDescription(offer);
-        await pc2.setRemoteDescription(offer);
-
-        const answer = await pc2.createAnswer();
-
-        await pc2.setLocalDescription(answer);
-        await pc1.setRemoteDescription(answer);
-
-        if (sdpDiffPre) {
-          displaySdpDiff(offer.sdp, answer.sdp);
-        }
-
-        realTestResultDiv.innerHTML = 'Connection established. Gathering stats...';
-
-        setTimeout(async () => {
-          const stats = await pc1.getStats();
-          displayRealTestResults(stats, false);
-
-          statsInterval = setInterval(async () => {
-            const stats = await pc1.getStats();
-            displayRealTestResults(stats, true);
-          }, 1000);
-
+        
+        // Random glitch effect
+        setInterval(() => {
+            if (Math.random() > 0.95) {
+                document.body.style.filter = `hue-rotate(${Math.random() * 360}deg)`;
+                setTimeout(() => {
+                    document.body.style.filter = 'none';
+                }, 100);
+            }
         }, 2000);
-
-      } catch (e) {
-        realTestResultDiv.innerHTML = createStatHTML('Supported', false, true) +
-          `<div class="flex items-center my-2"><div class="w-2 h-2 rounded-full mr-2 bg-red-500"></div>Test failed: ${e.toString()}</div>`;
-        cleanup();
-      }
-    }
-
-    function createStatHTML(label, value, isBoolean = false, id = '') {
-      let content = `<strong>${label}:</strong> ${value}`;
-      if (isBoolean) {
-        const status = (value === 'true' || value === true);
-        content = `<div class="w-2 h-2 rounded-full mr-2 ${status ? 'bg-secondary' : 'bg-red-500'}"></div><strong>${label}:</strong> ${status ? 'Yes' : 'No'}`;
-      }
-      const idAttr = id ? ` id="${id}"` : '';
-      return `<div${idAttr} class="flex items-center my-2">${content}</div>`;
-    }
-
-    function displaySdpDiff(offerSdp, answerSdp) {
-      const offerLines = offerSdp.split('\n');
-      const answerLines = answerSdp.split('\n');
-
-      const offerLinesByType = groupSdpLinesByType(offerLines);
-
-      const diffParts = ['<div class="diff-title">SDP Diff (Offer → Answer)</div>'];
-
-      for (const line of answerLines) {
-        const key = line.split('=')[0];
-        const offerLinesOfType = offerLinesByType[key] || [];
-
-        if (offerLinesOfType.length > 0) {
-          const offerLine = offerLinesOfType.shift();
-
-          if (line === offerLine) {
-            diffParts.push(`<div class="text-gray-400">${line}</div>`);
-          } else {
-            diffParts.push(`<div class="bg-red-500/20 text-red-500">- ${offerLine}</div>`);
-            diffParts.push(`<div class="bg-green-500/20 text-green-500">+ ${line}</div>`);
-          }
-        } else {
-          diffParts.push(`<div class="bg-green-500/20 text-green-500">+ ${line}</div>`);
-        }
-      }
-
-      const remainingOfferLines = Object.values(offerLinesByType).flat();
-      for (const line of remainingOfferLines) {
-        diffParts.push(`<div class="bg-red-500/20 text-red-500">- ${line}</div>`);
-      }
-
-      sdpDiffPre.innerHTML = diffParts.join('');
-    }
-
-    function groupSdpLinesByType(lines) {
-      const linesByType = {};
-
-      for (const line of lines) {
-        const key = line.split('=')[0];
-        if (!linesByType[key]) {
-          linesByType[key] = [];
-        }
-        linesByType[key].push(line);
-      }
-
-      return linesByType;
-    }
-
-    function checkStreamSmooth(stats) {
-      const currentStats = {
-        totalPausesDuration: stats.totalPausesDuration || 0,
-        totalFreezesDuration: stats.totalFreezesDuration || 0,
-        framesDropped: stats.framesDropped || 0,
-        timestamp: stats.timestamp || Date.now()
-      };
-
-      if (prevStats.timestamp === 0) {
-        prevStats = { ...currentStats };
-        return true;
-      }
-
-      if (currentStats.timestamp <= prevStats.timestamp) {
-        return true;
-      }
-
-      const isSmooth = !(
-        currentStats.totalPausesDuration > prevStats.totalPausesDuration ||
-        currentStats.totalFreezesDuration > prevStats.totalFreezesDuration ||
-        currentStats.framesDropped > prevStats.framesDropped
-      );
-
-      prevStats = { ...currentStats };
-
-      return isSmooth;
-    }
-
-    function displayRealTestResults(stats, isUpdate = false) {
-      const videoStats = Array.from(stats.values()).find(
-        report => report.type === 'outbound-rtp' && report.kind === 'video'
-      );
-
-      const receiverStats = Array.from(stats.values()).find(
-        report => report.type === 'inbound-rtp' && report.kind === 'video'
-      );
-
-      if (!videoStats) {
-        if (!isUpdate) realTestResultDiv.innerHTML = 'Could not retrieve outbound video stats.';
-        return;
-      }
-      
-      const isSmooth = receiverStats ? checkStreamSmooth(receiverStats) : true;
-
-      if (isUpdate) {
-        updateExistingStats(videoStats, receiverStats, isSmooth);
-      } else {
-        createInitialStats(stats, videoStats, isSmooth);
-      }
-    }
-
-    function updateExistingStats(videoStats, receiverStats, isSmooth) {
-      const elements = {
-        resolution: document.getElementById('realtime-resolution'),
-        framerate: document.getElementById('realtime-framerate'),
-        bitrate: document.getElementById('realtime-bitrate'),
-        smooth: document.getElementById('realtime-smooth'),
-        powerEfficient: document.getElementById('realtime-power-efficient'),
-        encoder: document.getElementById('realtime-encoder')
-      };
-
-      if (elements.resolution) {
-        elements.resolution.innerHTML = `<strong>Resolution:</strong> ${videoStats.frameWidth}x${videoStats.frameHeight}`;
-      }
-
-      if (elements.framerate) {
-        elements.framerate.innerHTML = `<strong>Framerate:</strong> ${videoStats.framesPerSecond || 0} fps`;
-      }
-
-      if (elements.bitrate) {
-        elements.bitrate.innerHTML = `<strong>Bitrate:</strong> ${Math.round((videoStats.bytesSent * 8) / 1000)} kbps`;
-      }
-
-      if (elements.smooth) {
-        elements.smooth.innerHTML = `<div class="w-2 h-2 rounded-full mr-2 ${isSmooth ? 'bg-secondary' : 'bg-red-500'}"></div><strong>Smooth:</strong> ${isSmooth ? 'Yes' : 'No'}`;
-      }
-
-      if (elements.powerEfficient) {
-        const isPowerEfficient = Boolean(videoStats.powerEfficientEncoder);
-        elements.powerEfficient.innerHTML = `<div class="w-2 h-2 rounded-full mr-2 ${isPowerEfficient ? 'bg-secondary' : 'bg-red-500'}"></div><strong>Power Efficient:</strong> ${isPowerEfficient ? 'Yes' : 'No'}`;
-      }
-
-      if (elements.encoder && videoStats.encoderImplementation) {
-        elements.encoder.innerHTML = `<strong>Encoder:</strong> ${videoStats.encoderImplementation}`;
-      }
-
-      updateDebugMetrics(receiverStats);
-    }
-
-    function updateDebugMetrics(receiverStats) {
-      if (!receiverStats) return;
-
-      const debugEl = document.getElementById('realtime-debug');
-      if (!debugEl) return;
-
-      const metrics = {
-        pauses: receiverStats.totalPausesDuration || 0,
-        freezes: receiverStats.totalFreezesDuration || 0,
-        dropped: receiverStats.framesDropped || 0
-      };
-
-      debugEl.innerHTML = `
-        <div class="mt-2 p-2 bg-black/20 rounded text-xs font-mono">
-          <strong>Debug Metrics:</strong><br>
-          Pauses: ${metrics.pauses}ms<br>
-          Freezes: ${metrics.freezes}ms<br>
-          Dropped Frames: ${metrics.dropped}
-        </div>
-      `;
-    }
-
-    function createInitialStats(stats, videoStats, isSmooth) {
-      const codec = stats.get(videoStats.codecId);
-      let html = createStatHTML('Supported', true, true);
-      html += createStatHTML('Smooth', isSmooth, true, 'realtime-smooth');
-      html += createStatHTML('Power Efficient', videoStats.powerEfficientEncoder, Boolean(videoStats.powerEfficientEncoder), 'realtime-power-efficient');
-
-      if (codec) {
-        html += createStatHTML('Codec', codec.mimeType);
-        if (codec.sdpFmtpLine) {
-          html += `<div class="flex items-center my-2" style="padding-left: 20px; font-size: 0.6rem;">${codec.sdpFmtpLine}</div>`;
-        }
-      }
-
-      if (videoStats.encoderImplementation) {
-        html += createStatHTML('Encoder', videoStats.encoderImplementation, false, 'realtime-encoder');
-      }
-
-      html += `<div id="realtime-resolution" class="flex items-center my-2"><strong>Resolution:</strong> ${videoStats.frameWidth}x${videoStats.frameHeight}</div>`;
-      html += `<div id="realtime-framerate" class="flex items-center my-2"><strong>Framerate:</strong> ${videoStats.framesPerSecond || 0} fps</div>`;
-      html += `<div id="realtime-bitrate" class="flex items-center my-2"><strong>Bitrate:</strong> ${Math.round((videoStats.bytesSent * 8) / 1000)} kbps</div>`;
-
-      realTestResultDiv.innerHTML = html;
-    }
-
-    function setResolution(width, height) {
-      widthInput.value = width;
-      heightInput.value = height;
-
-      let activeToggle = null;
-      resolutionToggles.forEach(toggle => {
-        if (parseInt(toggle.dataset.width) === width && parseInt(toggle.dataset.height) === height) {
-          activeToggle = toggle;
-        }
-      });
-
-      updateResolutionToggleStyles(activeToggle);
-      handleVideoParameterChange();
-    }
-
-    codecSelect.addEventListener('change', () => {
-      updateProfileAndLevelOptions();
-      handleVideoParameterChange();
-    });
-
-    profileSelect.addEventListener('change', () => {
-      generateProfileLevelId();
-      handleVideoParameterChange();
-    });
-
-    levelSelect.addEventListener('change', () => {
-      generateProfileLevelId();
-      handleVideoParameterChange();
-    });
-
-    widthInput.addEventListener('change', handleVideoParameterChange);
-    heightInput.addEventListener('change', handleVideoParameterChange);
-    framerateInput.addEventListener('change', handleVideoParameterChange);
-
-    resolutionToggles.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const width = parseInt(btn.dataset.width);
-        const height = parseInt(btn.dataset.height);
-        setResolution(width, height);
-      });
-    });
-
-    runTestButton.addEventListener('click', runTest);
-
-    function updateResolutionToggleStyles(activeButton) {
-      resolutionToggles.forEach(btn => {
-        btn.classList.remove('bg-primary', 'border-primary', 'text-white');
-        btn.classList.add('bg-surface', 'border-border');
-      });
-
-      if (activeButton) {
-        activeButton.classList.remove('bg-surface', 'border-border');
-        activeButton.classList.add('bg-primary', 'border-primary', 'text-white');
-      }
-    }
-
-    updateProfileAndLevelOptions();
-  </script>
+    </script>
 </body>
-
 </html>
