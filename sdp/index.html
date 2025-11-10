@@ -15,41 +15,91 @@
             padding: 0 !important;
             overflow: visible !important;
         }
-        
+
         /* Custom highlighting colors for SDP */
-        .hljs-meta { color: #86efac; font-weight: bold; } /* v= version - green */
-        .hljs-keyword { color: #fbbf24; } /* o= origin, ICE/security attrs - yellow */
-        .hljs-title { color: #60a5fa; } /* s= session, codec names - blue */
-        .hljs-type { color: #f472b6; font-weight: bold; } /* m= media, direction attrs - pink */
-        .hljs-variable { color: #a78bfa; } /* c= connection, rtcp - purple */
-        .hljs-attr { color: #94a3b8; } /* a= attributes - slate */
-        .hljs-built_in { color: #34d399; } /* common attributes (rtpmap, fmtp, etc) - emerald */
-        .hljs-number { color: #fca5a5; } /* numbers - light red/pink */
-        .hljs-string { color: #67e8f9; } /* strings/IPs/URLs - cyan */
-        .hljs-comment { color: #fb923c; } /* t= time, fingerprints - orange */
-        .hljs-symbol { color: #c084fc; } /* b= bandwidth, UUIDs - violet */
-        .hljs-params { color: #9ca3af; } /* other fields - gray */
-        
+        .hljs-meta {
+            color: #86efac;
+            font-weight: bold;
+        }
+
+        /* v= version - green */
+        .hljs-keyword {
+            color: #fbbf24;
+        }
+
+        /* o= origin, ICE/security attrs - yellow */
+        .hljs-title {
+            color: #60a5fa;
+        }
+
+        /* s= session, codec names - blue */
+        .hljs-type {
+            color: #f472b6;
+            font-weight: bold;
+        }
+
+        /* m= media, direction attrs - pink */
+        .hljs-variable {
+            color: #a78bfa;
+        }
+
+        /* c= connection, rtcp - purple */
+        .hljs-attr {
+            color: #94a3b8;
+        }
+
+        /* a= attributes - slate */
+        .hljs-built_in {
+            color: #34d399;
+        }
+
+        /* common attributes (rtpmap, fmtp, etc) - emerald */
+        .hljs-number {
+            color: #fca5a5;
+        }
+
+        /* numbers - light red/pink */
+        .hljs-string {
+            color: #67e8f9;
+        }
+
+        /* strings/IPs/URLs - cyan */
+        .hljs-comment {
+            color: #fb923c;
+        }
+
+        /* t= time, fingerprints - orange */
+        .hljs-symbol {
+            color: #c084fc;
+        }
+
+        /* b= bandwidth, UUIDs - violet */
+        .hljs-params {
+            color: #9ca3af;
+        }
+
+        /* other fields - gray */
+
         /* Ensure highlighting overlay matches textarea */
         #sdp-highlight {
             overflow: hidden !important;
             z-index: 1;
         }
-        
+
         #sdp-input {
             z-index: 2;
         }
-        
+
         #sdp-input::placeholder {
             color: #64748b !important;
             opacity: 1 !important;
         }
-        
+
         #sdp-input:focus {
             border-color: #3b82f6 !important;
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
         }
-        
+
         /* Ensure the text stays transparent */
         textarea#sdp-input {
             -webkit-text-fill-color: transparent !important;
@@ -87,12 +137,11 @@
                     </div>
 
                     <div class="relative" style="position: relative;">
-                        <pre id="sdp-highlight" class="font-mono" style="margin: 0; padding: 0.75rem; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word; position: absolute; top: 0; left: 0; right: 0; pointer-events: none; background: #0f172a; border: 1px solid #334155; border-radius: 0.25rem; overflow: hidden;"><code class="language-sdp"></code></pre>
-                        <textarea id="sdp-input"
-                            class="font-mono"
+                        <pre id="sdp-highlight" class="font-mono"
+                            style="margin: 0; padding: 0.75rem; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word; position: absolute; top: 0; left: 0; right: 0; pointer-events: none; background: #0f172a; border: 1px solid #334155; border-radius: 0.25rem; overflow: hidden;"><code class="language-sdp"></code></pre>
+                        <textarea id="sdp-input" class="font-mono"
                             style="width: 100%; box-sizing: border-box; min-height: 100%; overflow: hidden; resize: none; position: relative; background: transparent !important; color: transparent !important; caret-color: #94a3b8 !important; padding: 0.75rem; border: 1px solid #334155; border-radius: 0.25rem; outline: none;"
-                            spellcheck="false"
-                            placeholder='Paste your SDP here (raw, JSON, or quoted)...
+                            spellcheck="false" placeholder='Paste your SDP here (raw, JSON, or quoted)...
 
 The formatter will automatically detect and format:
 - Raw SDP text
@@ -114,7 +163,7 @@ The formatter will automatically detect and format:
 
     <script>
         // Define SDP language for highlight.js
-        hljs.registerLanguage('sdp', function(hljs) {
+        hljs.registerLanguage('sdp', function (hljs) {
             return {
                 name: 'SDP',
                 case_insensitive: false,
@@ -345,7 +394,7 @@ The formatter will automatically detect and format:
 
             resizeTextarea() {
                 this.sdpInput.style.height = 'auto';
-                this.sdpInput.style.height = `${this.sdpInput.scrollHeight + this.sdpInput.offsetHeight}px`;
+                this.sdpInput.style.height =  this.sdpInput.clientHeight + this.sdpInput.scrollHeight + this.sdpInput.offsetHeight + 'px';
                 this.sdpHighlight.style.height = this.sdpInput.style.height;
             }
 
