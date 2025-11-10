@@ -6,6 +6,55 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SDP Formatter</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <style>
+        /* Reset highlight.js defaults */
+        .hljs {
+            background: transparent !important;
+            color: inherit !important;
+            padding: 0 !important;
+            overflow: visible !important;
+        }
+        
+        /* Custom highlighting colors for SDP */
+        .hljs-meta { color: #86efac; font-weight: bold; } /* v= version - green */
+        .hljs-keyword { color: #fbbf24; } /* o= origin, ICE/security attrs - yellow */
+        .hljs-title { color: #60a5fa; } /* s= session, codec names - blue */
+        .hljs-type { color: #f472b6; font-weight: bold; } /* m= media, direction attrs - pink */
+        .hljs-variable { color: #a78bfa; } /* c= connection, rtcp - purple */
+        .hljs-attr { color: #94a3b8; } /* a= attributes - slate */
+        .hljs-built_in { color: #34d399; } /* common attributes (rtpmap, fmtp, etc) - emerald */
+        .hljs-number { color: #fca5a5; } /* numbers - light red/pink */
+        .hljs-string { color: #67e8f9; } /* strings/IPs/URLs - cyan */
+        .hljs-comment { color: #fb923c; } /* t= time, fingerprints - orange */
+        .hljs-symbol { color: #c084fc; } /* b= bandwidth, UUIDs - violet */
+        .hljs-params { color: #9ca3af; } /* other fields - gray */
+        
+        /* Ensure highlighting overlay matches textarea */
+        #sdp-highlight {
+            overflow: hidden !important;
+            z-index: 1;
+        }
+        
+        #sdp-input {
+            z-index: 2;
+        }
+        
+        #sdp-input::placeholder {
+            color: #64748b !important;
+            opacity: 1 !important;
+        }
+        
+        #sdp-input:focus {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+        }
+        
+        /* Ensure the text stays transparent */
+        textarea#sdp-input {
+            -webkit-text-fill-color: transparent !important;
+        }
+    </style>
     <script>
         tailwind.config = {
             theme: {
@@ -37,15 +86,20 @@
                         <div id="format-status" class="text-xs text-slate-400"></div>
                     </div>
 
-                    <textarea id="sdp-input" style="width: 100%; box-sizing: border-box; min-height:100%; overflow: hidden; resize: none;"
-                        class="w-full p-3 rounded border border-border bg-background text-slate-200 focus:border-primary focus:ring focus:ring-primary/20 focus:outline-none font-mono"
-                        placeholder='Paste your SDP here (raw, JSON, or quoted)...
+                    <div class="relative" style="position: relative;">
+                        <pre id="sdp-highlight" class="font-mono" style="margin: 0; padding: 0.75rem; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word; position: absolute; top: 0; left: 0; right: 0; pointer-events: none; background: #0f172a; border: 1px solid #334155; border-radius: 0.25rem; overflow: hidden;"><code class="language-sdp"></code></pre>
+                        <textarea id="sdp-input"
+                            class="font-mono"
+                            style="width: 100%; box-sizing: border-box; min-height: 100%; overflow: hidden; resize: none; position: relative; background: transparent !important; color: transparent !important; caret-color: #94a3b8 !important; padding: 0.75rem; border: 1px solid #334155; border-radius: 0.25rem; outline: none;"
+                            spellcheck="false"
+                            placeholder='Paste your SDP here (raw, JSON, or quoted)...
 
 The formatter will automatically detect and format:
 - Raw SDP text
 - JSON: {"type":"offer","sdp":"v=0..."}
 - Quoted strings
 - Escaped sequences (\r\n, \n, etc.)'></textarea>
+                    </div>
                 </div>
 
                 <!-- Validation Summary Sidebar -->
@@ -59,9 +113,178 @@ The formatter will automatically detect and format:
     </div>
 
     <script>
+        // Define SDP language for highlight.js
+        hljs.registerLanguage('sdp', function(hljs) {
+            return {
+                name: 'SDP',
+                case_insensitive: false,
+                contains: [
+                    // Version field v=
+                    {
+                        scope: 'meta',
+                        begin: /^v=/m,
+                        end: /$/m,
+                        relevance: 10
+                    },
+                    // Origin field o=
+                    {
+                        scope: 'keyword',
+                        begin: /^o=/m,
+                        end: /$/m,
+                        contains: [
+                            {
+                                scope: 'string',
+                                begin: /\S+/,
+                                relevance: 0
+                            }
+                        ],
+                        relevance: 10
+                    },
+                    // Session name s=
+                    {
+                        scope: 'title',
+                        begin: /^s=/m,
+                        end: /$/m,
+                        relevance: 10
+                    },
+                    // Media m=
+                    {
+                        scope: 'type',
+                        begin: /^m=/m,
+                        end: /$/m,
+                        contains: [
+                            {
+                                scope: 'keyword',
+                                match: /\b(audio|video|application|data)\b/,
+                                relevance: 5
+                            },
+                            {
+                                scope: 'number',
+                                match: /\b\d+\b/
+                            }
+                        ],
+                        relevance: 10
+                    },
+                    // Connection c=
+                    {
+                        scope: 'variable',
+                        begin: /^c=/m,
+                        end: /$/m,
+                        contains: [
+                            {
+                                scope: 'string',
+                                match: /\b(?:\d{1,3}\.){3}\d{1,3}\b/
+                            }
+                        ],
+                        relevance: 5
+                    },
+                    // Attributes a= (with enhanced sub-patterns)
+                    {
+                        scope: 'attr',
+                        begin: /^a=/m,
+                        end: /$/m,
+                        contains: [
+                            // Common attribute names
+                            {
+                                scope: 'built_in',
+                                begin: /^a=(rtpmap|fmtp|rtcp-fb|extmap|ssrc|ssrc-group|mid|msid)/m,
+                                end: /(?=:|\s|$)/,
+                                relevance: 7
+                            },
+                            // ICE/security attributes
+                            {
+                                scope: 'keyword',
+                                begin: /^a=(candidate|ice-ufrag|ice-pwd|ice-options|fingerprint|setup)/m,
+                                end: /(?=:|\s|$)/,
+                                relevance: 7
+                            },
+                            // Direction attributes
+                            {
+                                scope: 'type',
+                                match: /^a=(sendrecv|sendonly|recvonly|inactive)$/m,
+                                relevance: 8
+                            },
+                            // RTCP attributes
+                            {
+                                scope: 'variable',
+                                begin: /^a=(rtcp|rtcp-mux|rtcp-rsize)/m,
+                                end: /(?=:|\s|$)/,
+                                relevance: 6
+                            },
+                            // Codec names (H264, VP8, VP9, AV1, etc.)
+                            {
+                                scope: 'title',
+                                match: /\b(H264|H265|VP8|VP9|AV1|opus|PCMU|PCMA|L16|red|ulpfec|rtx)\b/i,
+                                relevance: 5
+                            },
+                            // URLs in extmap
+                            {
+                                scope: 'string',
+                                match: /(https?:\/\/|urn:)[^\s]+/,
+                                relevance: 3
+                            },
+                            // IP addresses
+                            {
+                                scope: 'string',
+                                match: /\b(?:\d{1,3}\.){3}\d{1,3}\b/,
+                                relevance: 3
+                            },
+                            // IPv6 addresses
+                            {
+                                scope: 'string',
+                                match: /\b[0-9a-fA-F:]+:[0-9a-fA-F:]+\b/,
+                                relevance: 3
+                            },
+                            // Hash/fingerprint values (hex strings)
+                            {
+                                scope: 'comment',
+                                match: /\b([0-9A-F]{2}:){15,}[0-9A-F]{2}\b/,
+                                relevance: 2
+                            },
+                            // UUIDs/GUIDs
+                            {
+                                scope: 'symbol',
+                                match: /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i,
+                                relevance: 3
+                            },
+                            // Numbers (payload types, ports, etc.)
+                            {
+                                scope: 'number',
+                                match: /\b\d+\b/
+                            }
+                        ],
+                        relevance: 5
+                    },
+                    // Time t=
+                    {
+                        scope: 'comment',
+                        begin: /^t=/m,
+                        end: /$/m,
+                        relevance: 5
+                    },
+                    // Bandwidth b=
+                    {
+                        scope: 'symbol',
+                        begin: /^b=/m,
+                        end: /$/m,
+                        relevance: 3
+                    },
+                    // Other fields (i=, u=, e=, p=, etc.)
+                    {
+                        scope: 'params',
+                        begin: /^[a-z]=/im,
+                        end: /$/m,
+                        relevance: 0
+                    }
+                ]
+            };
+        });
+
         class SDPFormatterApp {
             constructor() {
                 this.sdpInput = document.getElementById('sdp-input');
+                this.sdpHighlight = document.getElementById('sdp-highlight');
+                this.highlightCode = this.sdpHighlight.querySelector('code');
                 this.formatStatus = document.getElementById('format-status');
                 this.validationSummary = document.getElementById('validation-summary');
                 this.summaryContent = document.getElementById('summary-content');
@@ -75,11 +298,28 @@ The formatter will automatically detect and format:
             init() {
                 this.sdpInput.addEventListener('input', this.onInputChange.bind(this));
                 this.sdpInput.addEventListener('paste', this.onInputChange.bind(this));
+                this.sdpInput.addEventListener('scroll', this.syncScroll.bind(this));
                 this.resizeTextarea();
+                this.updateHighlight();
+            }
+
+            syncScroll() {
+                this.sdpHighlight.scrollTop = this.sdpInput.scrollTop;
+                this.sdpHighlight.scrollLeft = this.sdpInput.scrollLeft;
+            }
+
+            updateHighlight() {
+                const text = this.sdpInput.value;
+                this.highlightCode.textContent = text + '\n'; // Add newline to prevent layout shift
+                // Remove the highlighted flag so we can re-highlight
+                delete this.highlightCode.dataset.highlighted;
+                hljs.highlightElement(this.highlightCode);
+                this.syncScroll();
             }
 
             onInputChange() {
                 this.resizeTextarea();
+                this.updateHighlight();
 
                 if (this.formatTimeout) {
                     clearTimeout(this.formatTimeout);
@@ -106,6 +346,7 @@ The formatter will automatically detect and format:
             resizeTextarea() {
                 this.sdpInput.style.height = 'auto';
                 this.sdpInput.style.height = `${this.sdpInput.scrollHeight + this.sdpInput.offsetHeight}px`;
+                this.sdpHighlight.style.height = this.sdpInput.style.height;
             }
 
             processInput() {
@@ -130,6 +371,7 @@ The formatter will automatically detect and format:
                 const cursorPos = this.sdpInput.selectionStart;
                 this.sdpInput.value = cleanSdp;
                 this.lastProcessedValue = cleanSdp;
+                this.updateHighlight();
                 this.resizeTextarea();
 
                 if (cursorPos <= cleanSdp.length) {
