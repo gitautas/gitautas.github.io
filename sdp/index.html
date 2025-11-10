@@ -2,475 +2,337 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SDP Formatter</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            primary: '#3b82f6',
-            secondary: '#10b981',
-            surface: '#1e293b',
-            background: '#0f172a',
-            border: '#334155',
-          }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SDP Formatter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#10b981',
+                        surface: '#1e293b',
+                        background: '#0f172a',
+                        border: '#334155',
+                    }
+                }
+            }
         }
-      }
-    }
-  </script>
-  <style>
-  </style>
+    </script>
+
 </head>
 
 <body class="bg-background text-slate-200 p-3 text-sm font-sans">
-  <div class="flex justify-center min-h-screen p-5">
-    <div class="w-full max-w-7xl">
-      <h1 class="text-primary text-center mb-5 font-bold text-xl">SDP Formatter & Validator</h1>
+    <div class="flex justify-center min-h-screen p-5">
+        <div class="w-full max-w-7xl">
+            <h1 class="text-primary text-center mb-5 font-bold text-xl">SDP Formatter & Validator</h1>
 
-      <div class="flex gap-5">
-        <!-- Main SDP Area -->
-        <div class="flex-1 bg-surface p-5 rounded border border-border shadow">
-          <div class="flex items-center justify-between mb-3">
-            <label for="sdp-input" class="font-medium text-sm">Paste SDP Here</label>
-            <div id="format-status" class="text-xs text-slate-400"></div>
-          </div>
-          
-          <textarea 
-            id="sdp-input" 
-            class="w-full p-3 rounded border border-border bg-background text-slate-200 focus:border-primary focus:ring focus:ring-primary/20 focus:outline-none font-mono text-xs resize-none"
-            style="height: calc(100vh - 200px);"
-            placeholder='Paste your SDP here (raw, JSON, or quoted)...
+            <div class="flex gap-5">
+                <!-- Main SDP Area -->
+                <div class="flex-1 bg-surface p-5 rounded border border-border shadow">
+                    <div class="flex items-center justify-between">
+                        <label for="sdp-input" class="font-medium text-sm">Paste SDP Here</label>
+                        <div id="format-status" class="text-xs text-slate-400"></div>
+                    </div>
+
+                    <textarea id="sdp-input" style="width: 100%; box-sizing: border-box; min-height:100%; overflow: hidden; resize: none;"
+                        class="w-full p-3 rounded border border-border bg-background text-slate-200 focus:border-primary focus:ring focus:ring-primary/20 focus:outline-none font-mono"
+                        placeholder='Paste your SDP here (raw, JSON, or quoted)...
 
 The formatter will automatically detect and format:
 - Raw SDP text
 - JSON: {"type":"offer","sdp":"v=0..."}
 - Quoted strings
-- Escaped sequences (\r\n, \n, etc.)'
-          ></textarea>
-        </div>
+- Escaped sequences (\r\n, \n, etc.)'></textarea>
+                </div>
 
-        <!-- Validation Summary Sidebar -->
-        <div 
-          id="validation-summary" 
-          class="w-80 bg-surface p-5 rounded border border-border shadow hidden"
-          style="height: calc(100vh - 200px); overflow-auto;"
-        >
-          <div class="font-semibold mb-3 text-primary">Validation Summary</div>
-          <div id="summary-content"></div>
+                <!-- Validation Summary Sidebar -->
+                <div id="validation-summary" class="w-80 bg-surface p-5 rounded border border-border shadow hidden"
+                    style="height: calc(40vh); overflow-auto;">
+                    <div class="font-semibold mb-3 text-primary">Validation Summary</div>
+                    <div id="summary-content"></div>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
-  </div>
 
-  <script>
-    const sdpInput = document.getElementById('sdp-input');
-    const formatStatus = document.getElementById('format-status');
-    const validationSummary = document.getElementById('validation-summary');
-    const summaryContent = document.getElementById('summary-content');
+    <script>
+        class SDPFormatterApp {
+            constructor() {
+                this.sdpInput = document.getElementById('sdp-input');
+                this.formatStatus = document.getElementById('format-status');
+                this.validationSummary = document.getElementById('validation-summary');
+                this.summaryContent = document.getElementById('summary-content');
 
-    let formatTimeout = null;
-    let lastProcessedValue = '';
+                this.formatTimeout = null;
+                this.lastProcessedValue = '';
 
-    // Auto-format on input with debouncing
-    sdpInput.addEventListener('input', () => {
-      if (formatTimeout) {
-        clearTimeout(formatTimeout);
-      }
-      
-      const currentValue = sdpInput.value.trim();
-      
-      // Clear validation if input is empty
-      if (!currentValue) {
-        validationSummary.classList.add('hidden');
-        formatStatus.textContent = '';
-        lastProcessedValue = '';
-        return;
-      }
-      
-      // Only reprocess if the value has actually changed
-      if (currentValue === lastProcessedValue) {
-        return;
-      }
-      
-      formatStatus.textContent = 'Parsing...';
-      
-      formatTimeout = setTimeout(() => {
-        processInput();
-      }, 500);
-    });
+                this.init();
+            }
 
-    // Also trigger on paste for immediate feedback
-    sdpInput.addEventListener('paste', () => {
-      setTimeout(() => {
-        if (formatTimeout) {
-          clearTimeout(formatTimeout);
+            init() {
+                this.sdpInput.addEventListener('input', this.onInputChange.bind(this));
+                this.sdpInput.addEventListener('paste', this.onInputChange.bind(this));
+                this.resizeTextarea();
+            }
+
+            onInputChange() {
+                this.resizeTextarea();
+
+                if (this.formatTimeout) {
+                    clearTimeout(this.formatTimeout);
+                }
+
+                const currentValue = this.sdpInput.value.trim();
+
+                if (!currentValue) {
+                    this.validationSummary.classList.add('hidden');
+                    this.formatStatus.textContent = '';
+                    this.lastProcessedValue = '';
+                    return;
+                }
+
+                if (currentValue === this.lastProcessedValue) {
+                    return;
+                }
+
+                this.formatStatus.textContent = 'Parsing...';
+
+                this.formatTimeout = setTimeout(() => this.processInput(), 300);
+            }
+
+            resizeTextarea() {
+                this.sdpInput.style.height = 'auto';
+                this.sdpInput.style.height = `${this.sdpInput.scrollHeight + this.sdpInput.offsetHeight}px`;
+            }
+
+            processInput() {
+                const input = this.sdpInput.value.trim();
+                if (!input) {
+                    this.validationSummary.classList.add('hidden');
+                    this.formatStatus.textContent = '';
+                    return;
+                }
+
+                const parseResult = this.parseInput(input);
+
+                if (!parseResult.success) {
+                    this.formatStatus.textContent = 'Invalid format';
+                    this.validationSummary.classList.add('hidden');
+                    return;
+                }
+
+                this.formatStatus.textContent = `Detected: ${parseResult.format}`;
+                const { sdp: cleanSdp, type: sdpType = 'offer' } = parseResult;
+
+                const cursorPos = this.sdpInput.selectionStart;
+                this.sdpInput.value = cleanSdp;
+                this.lastProcessedValue = cleanSdp;
+                this.resizeTextarea();
+
+                if (cursorPos <= cleanSdp.length) {
+                    this.sdpInput.setSelectionRange(cursorPos, cursorPos);
+                }
+
+                this.validate(cleanSdp, sdpType ?? 'offer');
+            }
+
+            parseInput(input) {
+                let trimmedInput = input.trim();
+
+                // 1. Handle quoted strings
+                if ((trimmedInput.startsWith('"') && trimmedInput.endsWith('"')) || (trimmedInput.startsWith("'") && trimmedInput.endsWith("'"))) {
+                    trimmedInput = trimmedInput.slice(1, -1);
+                    const unquotedResult = this.parseInput(trimmedInput);
+                    if (unquotedResult.success) {
+                        return { ...unquotedResult, format: `${unquotedResult.format} (quoted)` };
+                    }
+                }
+
+                // 2. Try parsing as JSON
+                try {
+                    const parsed = JSON.parse(trimmedInput);
+                    if (parsed && typeof parsed === 'object') {
+                        if (parsed.sdp && parsed.type) {
+                            return { success: true, sdp: parsed.sdp, type: parsed.type, format: 'JSON (RTCSessionDescription)' };
+                        }
+                    }
+                    if (typeof parsed === 'string') {
+                        return this.parseInput(parsed); // Handle double-stringified JSON
+                    }
+                } catch (e) {
+                    // Not JSON
+                }
+
+                // 3. Check for raw SDP
+                if (trimmedInput.includes('v=0')) {
+                    const sdp = trimmedInput.replace(/\\r\\n/g, '\r\n').replace(/\\n/g, '\n').replace(/\\r/g, '\r');
+                    return { success: true, sdp, type: null, format: 'Raw SDP' };
+                }
+
+                // 4. Last attempt to extract from a string
+                const sdpMatch = trimmedInput.match(/v=0[\s\S]*/);
+                if (sdpMatch) {
+                    const sdp = sdpMatch[0].replace(/\\r\\n/g, '\r\n').replace(/\\n/g, '\n');
+                    return { success: true, sdp, type: null, format: 'Extracted SDP' };
+                }
+
+                return { success: false, error: 'Could not parse input.' };
+            }
+
+            validate(sdp, type) {
+                const errors = [];
+                const warnings = [];
+                let validationSuccess = false;
+
+                console.log('Validating SDP:', sdp, type);
+
+                try {
+                    new RTCSessionDescription({ type, sdp });
+                    validationSuccess = true;
+                } catch (e) {
+                    errors.push({ line: null, message: `RTCSessionDescription validation failed: ${e.message}` });
+                }
+
+                const lines = sdp.split('\n').map(line => line.trim()).filter(line => line);
+                const lineValidation = this.validateSdpLines(lines);
+
+                errors.push(...lineValidation.errors);
+                warnings.push(...lineValidation.warnings);
+
+                this.displayValidationSummary(validationSuccess, errors, warnings, sdp);
+            }
+
+            validateSdpLines(lines) {
+                const errors = [];
+                const warnings = [];
+                const requiredFields = ['v=', 'o=', 's=', 't='];
+                const foundFields = new Set();
+
+                lines.forEach((line, index) => {
+                    const lineNum = index + 1;
+                    if (!line.match(/^[a-z]=/i)) {
+                        errors.push({ line: lineNum, message: 'Invalid SDP line format (should start with "x=")' });
+                        return;
+                    }
+
+                    const field = line.substring(0, 2);
+                    foundFields.add(field);
+
+                    switch (field) {
+                        case 'v=':
+                            if (line !== 'v=0') warnings.push({ line: lineNum, message: 'SDP version should be 0' });
+                            if (index !== 0) warnings.push({ line: lineNum, message: 'Version field should be the first line' });
+                            break;
+                        case 'o=':
+                            if (line.substring(2).split(' ').length !== 6) errors.push({ line: lineNum, message: 'Origin line should have 6 parts' });
+                            break;
+                        case 'm=':
+                            const mParts = line.substring(2).split(' ');
+                            if (mParts.length < 4) errors.push({ line: lineNum, message: 'Media line should have at least 4 parts' });
+                            if (!['audio', 'video', 'application', 'data'].includes(mParts[0])) {
+                                warnings.push({ line: lineNum, message: `Unknown media type: ${mParts[0]}` });
+                            }
+                            break;
+                        case 'a=':
+                            if (line.length <= 2) errors.push({ line: lineNum, message: 'Attribute line has no content' });
+                            break;
+                    }
+                });
+
+                requiredFields.forEach(field => {
+                    if (!foundFields.has(field)) {
+                        errors.push({ line: null, message: `Missing required SDP field: ${field}` });
+                    }
+                });
+
+                return { errors, warnings };
+            }
+
+            displayValidationSummary(success, errors, warnings, sdp) {
+                this.validationSummary.classList.remove('hidden');
+
+                const errorCount = errors.length;
+                const warningCount = warnings.length;
+                const lines = sdp.split('\n').filter(line => line.trim());
+
+                const errorMap = new Map();
+                errors.forEach(err => {
+                    if (err.line) {
+                        if (!errorMap.has(err.line)) errorMap.set(err.line, []);
+                        errorMap.get(err.line).push(err.message);
+                    }
+                });
+
+                const warningMap = new Map();
+                warnings.forEach(warn => {
+                    if (warn.line) {
+                        if (!warningMap.has(warn.line)) warningMap.set(warn.line, []);
+                        warningMap.get(warn.line).push(warn.message);
+                    }
+                });
+
+                const statusClass = success && errorCount === 0 ? 'secondary' : 'red-500';
+                const statusText = success && errorCount === 0 ? 'Valid SDP' : 'Invalid SDP';
+
+                let html = `
+          <div class="flex items-center mb-3 p-2 bg-${statusClass}/10 border border-${statusClass}/30 rounded">
+            <div class="w-2 h-2 rounded-full mr-2 bg-${statusClass}"></div>
+            <strong>${statusText}</strong>
+          </div>
+          <div class="mb-3 text-sm">
+            <div class="flex justify-between mb-1"><span>Lines:</span><span class="font-mono">${lines.length}</span></div>
+            <div class="flex justify-between mb-1"><span>Errors:</span><span class="font-mono ${errorCount > 0 ? 'text-red-500' : ''}">${errorCount}</span></div>
+            <div class="flex justify-between"><span>Warnings:</span><span class="font-mono ${warningCount > 0 ? 'text-yellow-500' : ''}">${warningCount}</span></div>
+          </div>
+        `;
+
+                const globalErrors = errors.filter(e => !e.line);
+                if (globalErrors.length > 0) {
+                    html += `
+            <div class="mb-3 p-2 bg-red-500/10 border border-red-500/30 rounded">
+              <div class="font-semibold text-red-500 mb-2 text-xs">Global Errors:</div>
+              ${globalErrors.map(err => `<div class="text-xs text-red-400 mb-1">• ${this.escapeHtml(err.message)}</div>`).join('')}
+            </div>
+          `;
+                }
+
+                const allLineNumbers = new Set([...errorMap.keys(), ...warningMap.keys()]);
+                const sortedLines = Array.from(allLineNumbers).sort((a, b) => a - b);
+
+                if (sortedLines.length > 0) {
+                    html += `
+            <div class="border-t border-border pt-3">
+              <div class="font-semibold text-sm mb-2">Line Issues:</div>
+              <div class="space-y-2 text-xs">
+                ${sortedLines.map(lineNum => `
+                  <div class="p-2 bg-background rounded border border-border">
+                    <div class="font-mono text-slate-400 mb-1">Line ${lineNum}</div>
+                    ${(errorMap.get(lineNum) || []).map(msg => `<div class="text-red-400 ml-2">⚠ ${this.escapeHtml(msg)}</div>`).join('')}
+                    ${(warningMap.get(lineNum) || []).map(msg => `<div class="text-yellow-400 ml-2">⚠ ${this.escapeHtml(msg)}</div>`).join('')}
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+                }
+
+                this.summaryContent.innerHTML = html;
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
         }
-        formatTimeout = setTimeout(() => {
-          processInput();
-        }, 200);
-      }, 10);
-    });
 
-    function processInput() {
-      const input = sdpInput.value.trim();
-      
-      if (!input) {
-        validationSummary.classList.add('hidden');
-        formatStatus.textContent = '';
-        return;
-      }
-
-      const parseResult = parseInput(input);
-      
-      if (!parseResult.success) {
-        formatStatus.textContent = 'Invalid format';
-        validationSummary.classList.add('hidden');
-        return;
-      }
-
-      formatStatus.textContent = `Detected: ${parseResult.format}`;
-      const cleanSdp = parseResult.sdp;
-      const sdpType = parseResult.type || 'offer';
-      
-      // Update the textarea with the clean, formatted SDP
-      const cursorPos = sdpInput.selectionStart;
-      sdpInput.value = cleanSdp;
-      lastProcessedValue = cleanSdp;
-      
-      // Try to restore cursor position approximately
-      if (cursorPos <= cleanSdp.length) {
-        sdpInput.setSelectionRange(cursorPos, cursorPos);
-      }
-
-      // Validate and show results
-      validate(cleanSdp, sdpType);
-    }
-
-    function parseInput(input) {
-      // Try to detect and parse different formats
-      
-      // 0. Remove surrounding quotes if present
-      let trimmedInput = input.trim();
-      if ((trimmedInput.startsWith('"') && trimmedInput.endsWith('"')) ||
-          (trimmedInput.startsWith("'") && trimmedInput.endsWith("'"))) {
-        trimmedInput = trimmedInput.slice(1, -1);
-        // Try parsing the unquoted content
-        const unquotedResult = parseInput(trimmedInput);
-        if (unquotedResult.success) {
-          return {
-            ...unquotedResult,
-            format: unquotedResult.format + ' (quoted)'
-          };
-        }
-      }
-      
-      // 1. Try parsing as JSON
-      try {
-        const parsed = JSON.parse(input);
-        if (parsed && typeof parsed === 'object') {
-          if (parsed.sdp && parsed.type) {
-            // RTCSessionDescription format
-            return {
-              success: true,
-              sdp: parsed.sdp,
-              type: parsed.type,
-              format: 'JSON (RTCSessionDescription)'
-            };
-          } else if (typeof parsed === 'string') {
-            // JSON-stringified string
-            return parseInput(parsed);
-          }
-        }
-      } catch (e) {
-        // Not JSON, continue
-      }
-
-      // 2. Try to detect if it's a double-stringified JSON
-      if (input.startsWith('"{') || input.startsWith('\'{')) {
-        try {
-          const unescaped = JSON.parse(input);
-          return parseInput(unescaped);
-        } catch (e) {
-          // Continue
-        }
-      }
-
-      // 3. Check if it looks like raw SDP
-      if (input.includes('v=0') || input.includes('o=') || input.includes('s=')) {
-        // Unescape common escape sequences
-        let sdp = input.replace(/\\r\\n/g, '\r\n')
-                       .replace(/\\n/g, '\n')
-                       .replace(/\\r/g, '\r');
-        
-        // If still no newlines, try splitting by \n
-        if (!sdp.includes('\n') && sdp.includes('\\n')) {
-          sdp = sdp.split('\\n').join('\n');
-        }
-
-        return {
-          success: true,
-          sdp: sdp,
-          type: null,
-          format: 'Raw SDP'
-        };
-      }
-
-      // 4. Last attempt - try to extract SDP from a string that might contain it
-      const sdpMatch = input.match(/v=0[\s\S]*/);
-      if (sdpMatch) {
-        return {
-          success: true,
-          sdp: sdpMatch[0].replace(/\\r\\n/g, '\r\n').replace(/\\n/g, '\n'),
-          type: null,
-          format: 'Extracted SDP'
-        };
-      }
-
-      return {
-        success: false,
-        error: 'Could not parse input. Please provide valid SDP in one of the supported formats.'
-      };
-    }
-
-    function validate(sdp, type) {
-      const errors = [];
-      const warnings = [];
-      let validationSuccess = false;
-
-      // Try to create RTCSessionDescription
-      try {
-        const sessionDesc = new RTCSessionDescription({
-          type: type,
-          sdp: sdp
+        document.addEventListener('DOMContentLoaded', () => {
+            new SDPFormatterApp();
         });
-        validationSuccess = true;
-      } catch (e) {
-        errors.push({
-          line: null,
-          message: `RTCSessionDescription validation failed: ${e.message}`
-        });
-      }
-
-      // Perform line-by-line validation
-      const lines = sdp.split('\n').map(line => line.trim()).filter(line => line);
-      const lineValidation = validateSdpLines(lines);
-      
-      errors.push(...lineValidation.errors);
-      warnings.push(...lineValidation.warnings);
-
-      // Show validation summary
-      displayValidationSummary(validationSuccess, errors, warnings, sdp);
-    }
-
-    function validateSdpLines(lines) {
-      const errors = [];
-      const warnings = [];
-      
-      // Basic SDP structure validation
-      const requiredFields = ['v=', 'o=', 's=', 't='];
-      const foundFields = new Set();
-
-      lines.forEach((line, index) => {
-        const lineNum = index + 1;
-        
-        if (line.length === 0) return;
-
-        // Check if line starts with valid SDP field
-        if (!line.match(/^[a-z]=/i)) {
-          errors.push({
-            line: lineNum,
-            message: 'Invalid SDP line format (should start with "x=")'
-          });
-          return;
-        }
-
-        const field = line.substring(0, 2);
-        foundFields.add(field);
-
-        // Specific field validations
-        switch (field) {
-          case 'v=':
-            if (line !== 'v=0') {
-              warnings.push({
-                line: lineNum,
-                message: 'SDP version should be 0'
-              });
-            }
-            if (index !== 0) {
-              warnings.push({
-                line: lineNum,
-                message: 'Version field should be the first line'
-              });
-            }
-            break;
-          
-          case 'o=':
-            // o=<username> <sess-id> <sess-version> <nettype> <addrtype> <unicast-address>
-            const oParts = line.substring(2).split(' ');
-            if (oParts.length !== 6) {
-              errors.push({
-                line: lineNum,
-                message: 'Origin line should have 6 space-separated parts'
-              });
-            }
-            break;
-          
-          case 'm=':
-            // m=<media> <port> <proto> <fmt>
-            const mParts = line.substring(2).split(' ');
-            if (mParts.length < 4) {
-              errors.push({
-                line: lineNum,
-                message: 'Media line should have at least 4 parts'
-              });
-            }
-            const validMedia = ['audio', 'video', 'application', 'data'];
-            if (!validMedia.includes(mParts[0])) {
-              warnings.push({
-                line: lineNum,
-                message: `Unknown media type: ${mParts[0]}`
-              });
-            }
-            break;
-          
-          case 'a=':
-            // Attribute line - very flexible, just check it has content
-            if (line.length <= 2) {
-              errors.push({
-                line: lineNum,
-                message: 'Attribute line has no content'
-              });
-            }
-            break;
-        }
-      });
-
-      // Check for required fields
-      requiredFields.forEach(field => {
-        if (!foundFields.has(field)) {
-          errors.push({
-            line: null,
-            message: `Missing required SDP field: ${field}`
-          });
-        }
-      });
-
-      return { errors, warnings };
-    }
-
-    function displayValidationSummary(success, errors, warnings, sdp) {
-      validationSummary.classList.remove('hidden');
-      
-      const errorCount = errors.length;
-      const warningCount = warnings.length;
-      const lines = sdp.split('\n').filter(line => line.trim());
-      
-      // Create error and warning maps
-      const errorMap = new Map();
-      const warningMap = new Map();
-      
-      errors.forEach(err => {
-        if (err.line) {
-          if (!errorMap.has(err.line)) {
-            errorMap.set(err.line, []);
-          }
-          errorMap.get(err.line).push(err.message);
-        }
-      });
-      
-      warnings.forEach(warn => {
-        if (warn.line) {
-          if (!warningMap.has(warn.line)) {
-            warningMap.set(warn.line, []);
-          }
-          warningMap.get(warn.line).push(warn.message);
-        }
-      });
-      
-      let html = '';
-      
-      // Status badge
-      if (success && errorCount === 0) {
-        html += `<div class="flex items-center mb-3 p-2 bg-secondary/10 border border-secondary/30 rounded">
-          <div class="w-2 h-2 rounded-full mr-2 bg-secondary"></div>
-          <strong>Valid SDP</strong>
-        </div>`;
-      } else {
-        html += `<div class="flex items-center mb-3 p-2 bg-red-500/10 border border-red-500/30 rounded">
-          <div class="w-2 h-2 rounded-full mr-2 bg-red-500"></div>
-          <strong>Invalid SDP</strong>
-        </div>`;
-      }
-      
-      // Counts
-      html += `<div class="mb-3 text-sm">`;
-      html += `<div class="flex justify-between mb-1">
-        <span>Lines:</span>
-        <span class="font-mono">${lines.length}</span>
-      </div>`;
-      html += `<div class="flex justify-between mb-1">
-        <span>Errors:</span>
-        <span class="font-mono ${errorCount > 0 ? 'text-red-500' : ''}">${errorCount}</span>
-      </div>`;
-      html += `<div class="flex justify-between">
-        <span>Warnings:</span>
-        <span class="font-mono ${warningCount > 0 ? 'text-yellow-500' : ''}">${warningCount}</span>
-      </div>`;
-      html += `</div>`;
-      
-      // List global errors (those without line numbers)
-      const globalErrors = errors.filter(e => !e.line);
-      if (globalErrors.length > 0) {
-        html += `<div class="mb-3 p-2 bg-red-500/10 border border-red-500/30 rounded">`;
-        html += `<div class="font-semibold text-red-500 mb-2 text-xs">Global Errors:</div>`;
-        globalErrors.forEach(err => {
-          html += `<div class="text-xs text-red-400 mb-1">• ${escapeHtml(err.message)}</div>`;
-        });
-        html += `</div>`;
-      }
-      
-      // Show line-specific errors and warnings
-      if (errorMap.size > 0 || warningMap.size > 0) {
-        html += `<div class="border-t border-border pt-3">`;
-        html += `<div class="font-semibold text-sm mb-2">Line Issues:</div>`;
-        
-        const allLineNumbers = new Set([...errorMap.keys(), ...warningMap.keys()]);
-        const sortedLines = Array.from(allLineNumbers).sort((a, b) => a - b);
-        
-        html += `<div class="space-y-2 text-xs">`;
-        sortedLines.forEach(lineNum => {
-          const lineErrors = errorMap.get(lineNum) || [];
-          const lineWarnings = warningMap.get(lineNum) || [];
-          
-          html += `<div class="p-2 bg-background rounded border border-border">`;
-          html += `<div class="font-mono text-slate-400 mb-1">Line ${lineNum}</div>`;
-          
-          lineErrors.forEach(msg => {
-            html += `<div class="text-red-400 ml-2">⚠ ${escapeHtml(msg)}</div>`;
-          });
-          
-          lineWarnings.forEach(msg => {
-            html += `<div class="text-yellow-400 ml-2">⚠ ${escapeHtml(msg)}</div>`;
-          });
-          
-          html += `</div>`;
-        });
-        html += `</div>`;
-        html += `</div>`;
-      }
-      
-      summaryContent.innerHTML = html;
-    }
-
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
-  </script>
+    </script>
 </body>
 
 </html>
