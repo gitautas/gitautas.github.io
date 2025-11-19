@@ -8,129 +8,63 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <style>
+        :root { --sdp-main-width: 100%; }
+        main#sdp-main { width: min(100%, var(--sdp-main-width)); max-width: 100%; }
         /* Reset highlight.js defaults */
-        .hljs {
-            background: transparent !important;
-            color: inherit !important;
-            padding: 0 !important;
-            overflow: visible !important;
-        }
-
+        .hljs { background: transparent !important; color: inherit !important; padding: 0 !important; overflow: visible !important;}
         /* Custom highlighting colors for SDP */
-        .hljs-meta {
-            color: #86efac;
-            font-weight: bold;
-        }
-
+        .hljs-meta { color: #86efac; font-weight: bold; }
         /* v= version - green */
-        .hljs-keyword {
-            color: #fbbf24;
-        }
-
+        .hljs-keyword { color: #fbbf24; }
         /* o= origin, ICE/security attrs - yellow */
-        .hljs-title {
-            color: #60a5fa;
-        }
-
+        .hljs-title { color: #60a5fa; }
         /* s= session, codec names - blue */
-        .hljs-type {
-            color: #f472b6;
-            font-weight: bold;
-        }
-
+        .hljs-type { color: #f472b6; font-weight: bold; }
         /* m= media, direction attrs - pink */
-        .hljs-variable {
-            color: #a78bfa;
-        }
-
+        .hljs-variable {color: #a78bfa; }
         /* c= connection, rtcp - purple */
-        .hljs-attr {
-            color: #94a3b8;
-        }
-
+        .hljs-attr { color: #94a3b8; }
         /* a= attributes - slate */
-        .hljs-built_in {
-            color: #34d399;
-        }
-
+        .hljs-built_in { color: #34d399;}
         /* common attributes (rtpmap, fmtp, etc) - emerald */
-        .hljs-number {
-            color: #fca5a5;
-        }
-
+        .hljs-number { color: #fca5a5; }
         /* numbers - light red/pink */
-        .hljs-string {
-            color: #67e8f9;
-        }
-
+        .hljs-string { color: #67e8f9; }
         /* strings/IPs/URLs - cyan */
-        .hljs-comment {
-            color: #fb923c;
-        }
-
+        .hljs-comment { color: #fb923c; }
         /* t= time, fingerprints - orange */
-        .hljs-symbol {
-            color: #c084fc;
-        }
-
+        .hljs-symbol { color: #c084fc; }
         /* b= bandwidth, UUIDs - violet */
-        .hljs-params {
-            color: #9ca3af;
-        }
+        .hljs-params { color: #9ca3af; }
 
-        /* other fields - gray */
-
-        /* Ensure highlighting overlay matches textarea */
-        #sdp-highlight {
-            overflow: hidden !important;
-            z-index: 1;
-        }
-
-        #sdp-input {
-            z-index: 2;
-        }
-
-        #sdp-input::placeholder {
-            color: #64748b !important;
-            opacity: 1 !important;
-        }
-
-        #sdp-input:focus {
-            border-color: #3b82f6 !important;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
-        }
-
-        /* Ensure the text stays transparent */
-        textarea#sdp-input {
-            -webkit-text-fill-color: transparent !important;
-        }
+        /* Textarea & Highlighting Styles */
+        #sdp-highlight { overflow: hidden !important; z-index: 1; }
+        #sdp-input { z-index: 2; }
+        #sdp-input::placeholder { color: #64748b !important; opacity: 1 !important; }
+        #sdp-input:focus { border-color: #3b82f6 !important; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important; }
+        textarea#sdp-input { -webkit-text-fill-color: transparent !important; }
     </style>
     <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#3b82f6',
-                        secondary: '#10b981',
-                        surface: '#1e293b',
-                        background: '#0f172a',
-                        border: '#334155',
-                    }
-                }
-            }
-        }
+        tailwind.config = { theme: { extend: {
+        colors: {
+            primary: '#3b82f6',
+            secondary: '#10b981',
+            surface: '#1e293b',
+            background: '#0f172a',
+            border: '#334155',
+        }}}};
     </script>
 
 </head>
 
 <body class="bg-background text-slate-200 p-3 text-sm font-sans">
     <div class="flex justify-center min-h-screen p-5">
-        <div class="w-full max-w-7xl">
+        <div class="w-full">
             <h1 class="text-primary text-center mb-5 font-bold text-xl">SDP Formatter & Validator</h1>
 
-            <div class="flex gap-5">
+            <div class="flex flex-col gap-5 xl:flex-row xl:items-start">
                 <!-- Main SDP Area -->
-                <div class="flex-1 bg-surface p-5 rounded border border-border shadow">
+                <main id="sdp-main" class="bg-surface p-5 rounded border border-border shadow w-full">
                     <div class="flex items-center justify-between">
                         <label for="sdp-input" class="font-medium text-sm">Paste SDP Here</label>
                         <div id="format-status" class="text-xs text-slate-400"></div>
@@ -143,20 +77,20 @@
                             style="width: 100%; box-sizing: border-box; min-height: 100%; overflow: hidden; resize: none; position: relative; background: transparent !important; color: transparent !important; caret-color: #94a3b8 !important; padding: 0.75rem; border: 1px solid #334155; border-radius: 0.25rem; outline: none;"
                             spellcheck="false" placeholder='Paste your SDP here (raw, JSON, or quoted)...
 
-The formatter will automatically detect and format:
-- Raw SDP text
-- JSON: {"type":"offer","sdp":"v=0..."}
-- Quoted strings
-- Escaped sequences (\r\n, \n, etc.)'></textarea>
+                        The formatter will automatically detect and format:
+                        - Raw SDP text
+                        - JSON: {"type":"offer","sdp":"v=0..."}
+                        - Quoted strings
+                        - Escaped sequences (\r\n, \n, etc.)'></textarea>
                     </div>
-                </div>
+                </main>
 
                 <!-- Validation Summary Sidebar -->
-                <div id="validation-summary" class="w-80 bg-surface p-5 rounded border border-border shadow hidden"
-                    style="height: calc(40vh); overflow-auto;">
+                <aside id="validation-summary" class="w-80 bg-surface p-5 rounded border border-border shadow hidden"
+                    style="height: calc(40vh); overflow: auto;">
                     <div class="font-semibold mb-3 text-primary">Validation Summary</div>
                     <div id="summary-content"></div>
-                </div>
+                </aside>
             </div>
         </div>
     </div>
@@ -169,162 +103,23 @@ The formatter will automatically detect and format:
                 case_insensitive: false,
                 contains: [
                     // Version field v=
-                    {
-                        scope: 'meta',
-                        begin: /^v=/m,
-                        end: /$/m,
-                        relevance: 10
-                    },
+                    { scope: 'meta', begin: /^v=/m, end: /$/m, relevance: 10 },
                     // Origin field o=
-                    {
-                        scope: 'keyword',
-                        begin: /^o=/m,
-                        end: /$/m,
-                        contains: [
-                            {
-                                scope: 'string',
-                                begin: /\S+/,
-                                relevance: 0
-                            }
-                        ],
-                        relevance: 10
-                    },
+                    { scope: 'keyword', begin: /^o=/m, end: /$/m, contains: [{ scope: 'string', begin: /\S+/, relevance: 0 }], relevance: 10 },
                     // Session name s=
-                    {
-                        scope: 'title',
-                        begin: /^s=/m,
-                        end: /$/m,
-                        relevance: 10
-                    },
+                    { scope: 'title', begin: /^s=/m, end: /$/m, relevance: 10 },
                     // Media m=
-                    {
-                        scope: 'type',
-                        begin: /^m=/m,
-                        end: /$/m,
-                        contains: [
-                            {
-                                scope: 'keyword',
-                                match: /\b(audio|video|application|data)\b/,
-                                relevance: 5
-                            },
-                            {
-                                scope: 'number',
-                                match: /\b\d+\b/
-                            }
-                        ],
-                        relevance: 10
-                    },
+                    { scope: 'type', begin: /^m=/m, end: /$/m, contains: [{ scope: 'keyword', match: /\b(audio|video|application|data)\b/, relevance: 5 }, { scope: 'number', match: /\b\d+\b/ }], relevance: 10 },
                     // Connection c=
-                    {
-                        scope: 'variable',
-                        begin: /^c=/m,
-                        end: /$/m,
-                        contains: [
-                            {
-                                scope: 'string',
-                                match: /\b(?:\d{1,3}\.){3}\d{1,3}\b/
-                            }
-                        ],
-                        relevance: 5
-                    },
+                    { scope: 'variable', begin: /^c=/m, end: /$/m, contains: [{ scope: 'string', match: /\b(?:\d{1,3}\.){3}\d{1,3}\b/ }], relevance: 5 },
                     // Attributes a= (with enhanced sub-patterns)
-                    {
-                        scope: 'attr',
-                        begin: /^a=/m,
-                        end: /$/m,
-                        contains: [
-                            // Common attribute names
-                            {
-                                scope: 'built_in',
-                                begin: /^a=(rtpmap|fmtp|rtcp-fb|extmap|ssrc|ssrc-group|mid|msid)/m,
-                                end: /(?=:|\s|$)/,
-                                relevance: 7
-                            },
-                            // ICE/security attributes
-                            {
-                                scope: 'keyword',
-                                begin: /^a=(candidate|ice-ufrag|ice-pwd|ice-options|fingerprint|setup)/m,
-                                end: /(?=:|\s|$)/,
-                                relevance: 7
-                            },
-                            // Direction attributes
-                            {
-                                scope: 'type',
-                                match: /^a=(sendrecv|sendonly|recvonly|inactive)$/m,
-                                relevance: 8
-                            },
-                            // RTCP attributes
-                            {
-                                scope: 'variable',
-                                begin: /^a=(rtcp|rtcp-mux|rtcp-rsize)/m,
-                                end: /(?=:|\s|$)/,
-                                relevance: 6
-                            },
-                            // Codec names (H264, VP8, VP9, AV1, etc.)
-                            {
-                                scope: 'title',
-                                match: /\b(H264|H265|VP8|VP9|AV1|opus|PCMU|PCMA|L16|red|ulpfec|rtx)\b/i,
-                                relevance: 5
-                            },
-                            // URLs in extmap
-                            {
-                                scope: 'string',
-                                match: /(https?:\/\/|urn:)[^\s]+/,
-                                relevance: 3
-                            },
-                            // IP addresses
-                            {
-                                scope: 'string',
-                                match: /\b(?:\d{1,3}\.){3}\d{1,3}\b/,
-                                relevance: 3
-                            },
-                            // IPv6 addresses
-                            {
-                                scope: 'string',
-                                match: /\b[0-9a-fA-F:]+:[0-9a-fA-F:]+\b/,
-                                relevance: 3
-                            },
-                            // Hash/fingerprint values (hex strings)
-                            {
-                                scope: 'comment',
-                                match: /\b([0-9A-F]{2}:){15,}[0-9A-F]{2}\b/,
-                                relevance: 2
-                            },
-                            // UUIDs/GUIDs
-                            {
-                                scope: 'symbol',
-                                match: /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i,
-                                relevance: 3
-                            },
-                            // Numbers (payload types, ports, etc.)
-                            {
-                                scope: 'number',
-                                match: /\b\d+\b/
-                            }
-                        ],
-                        relevance: 5
-                    },
+                    { scope: 'attr', begin: /^a=/m, end: /$/m, contains: [{ scope: 'built_in', begin: /^a=(rtpmap|fmtp|rtcp-fb|extmap|ssrc|ssrc-group|mid|msid)/m, end: /(?=:|\s|$)/, relevance: 7 }, { scope: 'keyword', begin: /^a=(candidate|ice-ufrag|ice-pwd|ice-options|fingerprint|setup)/m, end: /(?=:|\s|$)/, relevance: 7 }, { scope: 'type', match: /^a=(sendrecv|sendonly|recvonly|inactive)$/m, relevance: 8 }, { scope: 'variable', begin: /^a=(rtcp|rtcp-mux|rtcp-rsize)/m, end: /(?=:|\s|$)/, relevance: 6 }, { scope: 'title', match: /\b(H264|H265|VP8|VP9|AV1|opus|PCMU|PCMA|L16|red|ulpfec|rtx)\b/i, relevance: 5 }, { scope: 'string', match: /(https?:\/\/|urn:)[^\s]+/, relevance: 3 }, { scope: 'string', match: /\b(?:\d{1,3}\.){3}\d{1,3}\b/, relevance: 3 }, { scope: 'string', match: /\b[0-9a-fA-F:]+:[0-9a-fA-F:]+\b/, relevance: 3 }, { scope: 'comment', match: /\b([0-9A-F]{2}:){15,}[0-9A-F]{2}\b/, relevance: 2 }, { scope: 'symbol', match: /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i, relevance: 3 }, { scope: 'number', match: /\b\d+\b/ }], relevance: 5 },
                     // Time t=
-                    {
-                        scope: 'comment',
-                        begin: /^t=/m,
-                        end: /$/m,
-                        relevance: 5
-                    },
+                    { scope: 'comment', begin: /^t=/m, end: /$/m, relevance: 5 },
                     // Bandwidth b=
-                    {
-                        scope: 'symbol',
-                        begin: /^b=/m,
-                        end: /$/m,
-                        relevance: 3
-                    },
+                    { scope: 'symbol', begin: /^b=/m, end: /$/m, relevance: 3 },
                     // Other fields (i=, u=, e=, p=, etc.)
-                    {
-                        scope: 'params',
-                        begin: /^[a-z]=/im,
-                        end: /$/m,
-                        relevance: 0
-                    }
+                    { scope: 'params', begin: /^[a-z]=/im, end: /$/m, relevance: 0 }
                 ]
             };
         });
@@ -337,9 +132,12 @@ The formatter will automatically detect and format:
                 this.formatStatus = document.getElementById('format-status');
                 this.validationSummary = document.getElementById('validation-summary');
                 this.summaryContent = document.getElementById('summary-content');
+                this.mainElement = document.getElementById('sdp-main');
+                this.measureContext = document.createElement('canvas').getContext('2d');
 
                 this.formatTimeout = null;
                 this.lastProcessedValue = '';
+                this.updateMainWidth = this.updateMainWidth.bind(this);
 
                 this.init();
             }
@@ -348,8 +146,10 @@ The formatter will automatically detect and format:
                 this.sdpInput.addEventListener('input', this.onInputChange.bind(this));
                 this.sdpInput.addEventListener('paste', this.onInputChange.bind(this));
                 this.sdpInput.addEventListener('scroll', this.syncScroll.bind(this));
+                window.addEventListener('resize', this.updateMainWidth);
                 this.resizeTextarea();
                 this.updateHighlight();
+                this.updateMainWidth();
             }
 
             syncScroll() {
@@ -369,6 +169,7 @@ The formatter will automatically detect and format:
             onInputChange() {
                 this.resizeTextarea();
                 this.updateHighlight();
+                this.updateMainWidth();
 
                 if (this.formatTimeout) {
                     clearTimeout(this.formatTimeout);
@@ -394,7 +195,7 @@ The formatter will automatically detect and format:
 
             resizeTextarea() {
                 this.sdpInput.style.height = 'auto';
-                this.sdpInput.style.height =  this.sdpInput.clientHeight + this.sdpInput.scrollHeight + this.sdpInput.offsetHeight + 'px';
+                this.sdpInput.style.height = this.sdpInput.clientHeight + this.sdpInput.scrollHeight + this.sdpInput.offsetHeight + 'px';
                 this.sdpHighlight.style.height = this.sdpInput.style.height;
             }
 
@@ -422,12 +223,51 @@ The formatter will automatically detect and format:
                 this.lastProcessedValue = cleanSdp;
                 this.updateHighlight();
                 this.resizeTextarea();
+                this.updateMainWidth();
 
                 if (cursorPos <= cleanSdp.length) {
                     this.sdpInput.setSelectionRange(cursorPos, cursorPos);
                 }
 
                 this.validate(cleanSdp, sdpType ?? 'offer');
+            }
+
+            updateMainWidth() {
+                if (!this.mainElement || !this.measureContext || !this.sdpInput) {
+                    return;
+                }
+
+                const computed = window.getComputedStyle(this.sdpInput);
+                const font = computed.font || `${computed.fontSize} ${computed.fontFamily}`;
+                this.measureContext.font = font;
+
+                const rawLines = this.sdpInput.value.split('\n');
+                const lines = rawLines.length ? rawLines : [' '];
+                let maxLineWidth = 0;
+
+                lines.forEach(line => {
+                    const metrics = this.measureContext.measureText(line || ' ');
+                    if (metrics.width > maxLineWidth) {
+                        maxLineWidth = metrics.width;
+                    }
+                });
+
+                const paddingLeft = parseFloat(computed.paddingLeft) || 0;
+                const paddingRight = parseFloat(computed.paddingRight) || 0;
+                const borderLeft = parseFloat(computed.borderLeftWidth) || 0;
+                const borderRight = parseFloat(computed.borderRightWidth) || 0;
+                const chromeWidth = paddingLeft + paddingRight + borderLeft + borderRight;
+
+                const hasContent = this.sdpInput.value.trim().length > 0;
+                const targetWidth = Math.ceil(maxLineWidth + chromeWidth + 2);
+                const parentWidth = this.mainElement.parentElement ? this.mainElement.parentElement.clientWidth : window.innerWidth;
+                const fallbackWidth = this.mainElement.getBoundingClientRect().width || parentWidth;
+                const widthCandidate = hasContent
+                    ? Math.min((targetWidth || fallbackWidth), parentWidth)
+                    : Math.min((fallbackWidth || parentWidth), parentWidth);
+                const resolvedWidth = Math.max(widthCandidate, 0);
+
+                this.mainElement.style.setProperty('--sdp-main-width', `${resolvedWidth}px`);
             }
 
             parseInput(input) {
@@ -549,6 +389,21 @@ The formatter will automatically detect and format:
                 const warningCount = warnings.length;
                 const lines = sdp.split('\n').filter(line => line.trim());
 
+                const { errorMap, warningMap } = this.buildIssueMaps(errors, warnings);
+                const statusClass = success && errorCount === 0 ? 'secondary' : 'red-500';
+                const statusText = success && errorCount === 0 ? 'Valid SDP' : 'Invalid SDP';
+
+                const sections = [
+                    this.renderStatusBlock(statusClass, statusText),
+                    this.renderStatsBlock(lines.length, errorCount, warningCount),
+                    this.renderGlobalErrorsBlock(errors),
+                    this.renderLineIssuesBlock(errorMap, warningMap),
+                ].filter(Boolean).join('');
+
+                this.summaryContent.innerHTML = sections;
+            }
+
+            buildIssueMaps(errors, warnings) {
                 const errorMap = new Map();
                 errors.forEach(err => {
                     if (err.line) {
@@ -565,52 +420,51 @@ The formatter will automatically detect and format:
                     }
                 });
 
-                const statusClass = success && errorCount === 0 ? 'secondary' : 'red-500';
-                const statusText = success && errorCount === 0 ? 'Valid SDP' : 'Invalid SDP';
+                return { errorMap, warningMap };
+            }
 
-                let html = `
-          <div class="flex items-center mb-3 p-2 bg-${statusClass}/10 border border-${statusClass}/30 rounded">
-            <div class="w-2 h-2 rounded-full mr-2 bg-${statusClass}"></div>
-            <strong>${statusText}</strong>
-          </div>
-          <div class="mb-3 text-sm">
-            <div class="flex justify-between mb-1"><span>Lines:</span><span class="font-mono">${lines.length}</span></div>
-            <div class="flex justify-between mb-1"><span>Errors:</span><span class="font-mono ${errorCount > 0 ? 'text-red-500' : ''}">${errorCount}</span></div>
-            <div class="flex justify-between"><span>Warnings:</span><span class="font-mono ${warningCount > 0 ? 'text-yellow-500' : ''}">${warningCount}</span></div>
-          </div>
-        `;
+            renderStatusBlock = (statusClass, statusText) => 
+                `<div class="flex items-center mb-3 p-2 bg-${statusClass}/10 border border-${statusClass}/30 rounded">
+                    <div class="w-2 h-2 rounded-full mr-2 bg-${statusClass}"></div>
+                    <strong>${statusText}</strong>
+                </div>`;
 
+            renderStatsBlock = (lineCount, errorCount, warningCount) =>
+                `<div class="mb-3 text-sm">
+                    <div class="flex justify-between mb-1"><span>Lines:</span><span class="font-mono">${lineCount}</span></div>
+                    <div class="flex justify-between mb-1"><span>Errors:</span><span class="font-mono ${errorCount > 0 ? 'text-red-500' : ''}">${errorCount}</span></div>
+                    <div class="flex justify-between"><span>Warnings:</span><span class="font-mono ${warningCount > 0 ? 'text-yellow-500' : ''}">${warningCount}</span></div>
+                </div>`;
+
+            renderGlobalErrorsBlock(errors) {
                 const globalErrors = errors.filter(e => !e.line);
-                if (globalErrors.length > 0) {
-                    html += `
-            <div class="mb-3 p-2 bg-red-500/10 border border-red-500/30 rounded">
-              <div class="font-semibold text-red-500 mb-2 text-xs">Global Errors:</div>
-              ${globalErrors.map(err => `<div class="text-xs text-red-400 mb-1">• ${this.escapeHtml(err.message)}</div>`).join('')}
-            </div>
-          `;
-                }
+                if (globalErrors.length === 0) return '';
 
+                return `
+          <div class="mb-3 p-2 bg-red-500/10 border border-red-500/30 rounded">
+            <div class="font-semibold text-red-500 mb-2 text-xs">Global Errors:</div>
+            ${globalErrors.map(err => `<div class="text-xs text-red-400 mb-1">• ${this.escapeHtml(err.message)}</div>`).join('')}
+          </div>`;
+            }
+
+            renderLineIssuesBlock = (errorMap, warningMap) => {
                 const allLineNumbers = new Set([...errorMap.keys(), ...warningMap.keys()]);
                 const sortedLines = Array.from(allLineNumbers).sort((a, b) => a - b);
+                if (sortedLines.length === 0) return '';
 
-                if (sortedLines.length > 0) {
-                    html += `
-            <div class="border-t border-border pt-3">
-              <div class="font-semibold text-sm mb-2">Line Issues:</div>
-              <div class="space-y-2 text-xs">
-                ${sortedLines.map(lineNum => `
-                  <div class="p-2 bg-background rounded border border-border">
-                    <div class="font-mono text-slate-400 mb-1">Line ${lineNum}</div>
-                    ${(errorMap.get(lineNum) || []).map(msg => `<div class="text-red-400 ml-2">⚠ ${this.escapeHtml(msg)}</div>`).join('')}
-                    ${(warningMap.get(lineNum) || []).map(msg => `<div class="text-yellow-400 ml-2">⚠ ${this.escapeHtml(msg)}</div>`).join('')}
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-          `;
-                }
-
-                this.summaryContent.innerHTML = html;
+                return 
+                `<div class="border-t border-border pt-3">
+                    <div class="font-semibold text-sm mb-2">Line Issues:</div>
+                    <div class="space-y-2 text-xs">
+                    ${sortedLines.map(lineNum => `
+                        <div class="p-2 bg-background rounded border border-border">
+                        <div class="font-mono text-slate-400 mb-1">Line ${lineNum}</div>
+                        ${(errorMap.get(lineNum) || []).map(msg => `<div class="text-red-400 ml-2">⚠ ${this.escapeHtml(msg)}</div>`).join('')}
+                        ${(warningMap.get(lineNum) || []).map(msg => `<div class="text-yellow-400 ml-2">⚠ ${this.escapeHtml(msg)}</div>`).join('')}
+                        </div>
+                    `).join('')}
+                    </div>
+                </div>`;
             }
 
             escapeHtml(text) {
