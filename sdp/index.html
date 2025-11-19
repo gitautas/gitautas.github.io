@@ -38,11 +38,59 @@
         .hljs-params { color: #9ca3af; }
 
         /* Textarea & Highlighting Styles */
-        #sdp-highlight { overflow: hidden !important; z-index: 1; }
-        #sdp-input { z-index: 2; }
-        #sdp-input::placeholder { color: #64748b !important; opacity: 1 !important; }
-        #sdp-input:focus { border-color: #3b82f6 !important; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important; }
-        textarea#sdp-input { -webkit-text-fill-color: transparent !important; }
+        .sdp-input-wrapper { position: relative; }
+        .sdp-highlight {
+            margin: 0;
+            padding: 0.75rem;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            pointer-events: none;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.25rem;
+            overflow: hidden !important;
+            z-index: 1;
+        }
+        .sdp-input {
+            width: 100%;
+            box-sizing: border-box;
+            min-height: 100%;
+            overflow: hidden;
+            resize: none;
+            position: relative;
+            background: transparent !important;
+            color: transparent !important;
+            caret-color: #94a3b8 !important;
+            padding: 0.75rem;
+            border: 1px solid #334155;
+            border-radius: 0.25rem;
+            outline: none;
+            z-index: 2;
+        }
+        .sdp-input::placeholder { color: #64748b !important; opacity: 1 !important; }
+        .sdp-input:focus { border-color: #3b82f6 !important; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important; }
+        textarea.sdp-input { -webkit-text-fill-color: transparent !important; }
+
+        #full-diff-view { min-height: 80vh; }
+        #diff-output {
+            background: #111a2e;
+            border: 1px solid #334155;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+            font-size: 0.8rem;
+            color: #cbd5f5;
+            white-space: pre-wrap;
+            word-break: break-word;
+            min-height: 60vh;
+            overflow: auto;
+        }
+        #diff-output .diff-title { color: #3b82f6; font-weight: 600; margin-bottom: 0.5rem; }
     </style>
     <script>
         tailwind.config = { theme: { extend: {
@@ -58,42 +106,71 @@
 </head>
 
 <body class="bg-background text-slate-200 p-3 text-sm font-sans">
-    <div class="flex justify-center min-h-screen p-5">
-        <div class="w-full">
-            <h1 class="text-primary text-center mb-5 font-bold text-xl">SDP Formatter & Validator</h1>
+    <div id="formatter-shell">
+        <div class="flex justify-center min-h-screen p-5">
+            <div class="w-full">
+                <h1 class="text-primary text-center mb-5 font-bold text-xl">SDP Formatter & Validator</h1>
 
-            <div class="flex flex-col gap-5 xl:flex-row xl:items-start">
-                <!-- Main SDP Area -->
-                <main id="sdp-main" class="bg-surface p-5 rounded border border-border shadow w-full">
-                    <div class="flex items-center justify-between">
-                        <label for="sdp-input" class="font-medium text-sm">Paste SDP Here</label>
-                        <div id="format-status" class="text-xs text-slate-400"></div>
-                    </div>
+                <div class="flex flex-col gap-5 xl:flex-row xl:items-start">
+                    <!-- Main SDP Area -->
+                    <main id="sdp-main" class="bg-surface p-5 rounded border border-border shadow w-full">
+                        <div class="flex items-center justify-between">
+                            <label for="sdp-input" class="font-medium text-sm">Paste SDP Here</label>
+                            <div id="format-status" class="text-xs text-slate-400"></div>
+                        </div>
 
-                    <div class="relative" style="position: relative;">
-                        <pre id="sdp-highlight" class="font-mono"
-                            style="margin: 0; padding: 0.75rem; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word; position: absolute; top: 0; left: 0; right: 0; pointer-events: none; background: #0f172a; border: 1px solid #334155; border-radius: 0.25rem; overflow: hidden;"><code class="language-sdp"></code></pre>
-                        <textarea id="sdp-input" class="font-mono"
-                            style="width: 100%; box-sizing: border-box; min-height: 100%; overflow: hidden; resize: none; position: relative; background: transparent !important; color: transparent !important; caret-color: #94a3b8 !important; padding: 0.75rem; border: 1px solid #334155; border-radius: 0.25rem; outline: none;"
-                            spellcheck="false" placeholder='Paste your SDP here (raw, JSON, or quoted)...
+                        <div class="sdp-input-wrapper">
+                            <pre id="sdp-highlight" class="font-mono sdp-highlight"><code class="language-sdp"></code></pre>
+                            <textarea id="sdp-input" class="font-mono sdp-input"
+                                spellcheck="false" placeholder='Paste your SDP here (raw, JSON, or quoted)...
 
                         The formatter will automatically detect and format:
                         - Raw SDP text
                         - JSON: {"type":"offer","sdp":"v=0..."}
                         - Quoted strings
                         - Escaped sequences (\r\n, \n, etc.)'></textarea>
-                    </div>
-                </main>
+                        </div>
+                    </main>
 
-                <!-- Validation Summary Sidebar -->
-                <aside id="validation-summary" class="w-80 bg-surface p-5 rounded border border-border shadow hidden"
-                    style="height: calc(40vh); overflow: auto;">
-                    <div class="font-semibold mb-3 text-primary">Validation Summary</div>
-                    <div id="summary-content"></div>
-                </aside>
+                    <div class="flex flex-col gap-5 w-full xl:w-80">
+                        <!-- Validation Summary Sidebar -->
+                        <aside id="validation-summary" class="bg-surface p-5 rounded border border-border shadow hidden"
+                            style="height: calc(40vh); overflow: auto;">
+                            <div class="font-semibold mb-3 text-primary">Validation Summary</div>
+                            <div id="summary-content"></div>
+                        </aside>
+
+                        <aside id="secondary-input-card"
+                            class="bg-surface p-4 rounded border border-border shadow hidden text-sm">
+                            <div class="font-semibold text-primary mb-1">Paste another SDP to diff</div>
+                            <p class="text-xs text-slate-400 mb-3">Once your primary SDP is formatted, drop another one here to
+                                see a side-by-side comparison.</p>
+                            <div class="sdp-input-wrapper">
+                                <pre id="sdp-highlight-secondary" class="font-mono sdp-highlight"><code class="language-sdp"></code></pre>
+                                <textarea id="sdp-input-secondary" class="font-mono sdp-input" spellcheck="false"
+                                    placeholder='Paste another SDP, JSON, or quoted string to compare'></textarea>
+                            </div>
+                            <div id="secondary-status" class="text-xs text-slate-400 mt-2"></div>
+                            <button id="show-diff-btn" class="hidden mt-3 w-full bg-primary/80 hover:bg-primary text-white py-2 px-3 rounded text-xs font-semibold tracking-wide">Open diff view</button>
+                        </aside>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+
+    <section id="full-diff-view" class="hidden px-5">
+        <div class="max-w-6xl mx-auto">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h2 class="text-primary font-bold text-lg">SDP Diff (Primary → Comparison)</h2>
+                    <p class="text-xs text-slate-400" id="diff-subtitle">Highlighting additions, removals, and codec-specific hints.</p>
+                </div>
+                <button id="diff-back-btn" class="text-xs font-semibold uppercase tracking-wide text-slate-100 border border-slate-600 px-3 py-2 rounded hover:border-primary hover:text-primary">Back to formatter</button>
+            </div>
+            <pre id="diff-output" class="shadow"></pre>
+        </div>
+    </section>
 
     <script>
         // Define SDP language for highlight.js
@@ -134,41 +211,75 @@
                 this.summaryContent = document.getElementById('summary-content');
                 this.mainElement = document.getElementById('sdp-main');
                 this.measureContext = document.createElement('canvas').getContext('2d');
+                this.secondaryCard = document.getElementById('secondary-input-card');
+                this.secondaryInput = document.getElementById('sdp-input-secondary');
+                this.secondaryHighlight = document.getElementById('sdp-highlight-secondary');
+                this.secondaryHighlightCode = this.secondaryHighlight ? this.secondaryHighlight.querySelector('code') : null;
+                this.secondaryStatus = document.getElementById('secondary-status');
+                this.formatterShell = document.getElementById('formatter-shell');
+                this.fullDiffView = document.getElementById('full-diff-view');
+                this.diffOutput = document.getElementById('diff-output');
+                this.diffSubtitle = document.getElementById('diff-subtitle');
+                this.diffBackBtn = document.getElementById('diff-back-btn');
+                this.showDiffBtn = document.getElementById('show-diff-btn');
 
                 this.formatTimeout = null;
                 this.lastProcessedValue = '';
+                this.secondaryFormatTimeout = null;
+                this.secondaryLastProcessedValue = '';
+                this.primarySdp = '';
+                this.secondarySdp = '';
+                this.secondaryEnabled = false;
                 this.updateMainWidth = this.updateMainWidth.bind(this);
 
                 this.init();
             }
 
             init() {
-                this.sdpInput.addEventListener('input', this.onInputChange.bind(this));
-                this.sdpInput.addEventListener('paste', this.onInputChange.bind(this));
-                this.sdpInput.addEventListener('scroll', this.syncScroll.bind(this));
+                if (this.sdpInput) {
+                    this.sdpInput.addEventListener('input', this.onInputChange.bind(this));
+                    this.sdpInput.addEventListener('paste', this.onInputChange.bind(this));
+                    this.sdpInput.addEventListener('scroll', () => this.syncScroll(this.sdpInput, this.sdpHighlight));
+                }
+
+                if (this.secondaryInput) {
+                    this.secondaryInput.addEventListener('input', this.onSecondaryInputChange.bind(this));
+                    this.secondaryInput.addEventListener('paste', this.onSecondaryInputChange.bind(this));
+                    this.secondaryInput.addEventListener('scroll', () => this.syncScroll(this.secondaryInput, this.secondaryHighlight));
+                }
+
+                if (this.diffBackBtn) {
+                    this.diffBackBtn.addEventListener('click', () => this.exitDiffMode());
+                }
+
+                if (this.showDiffBtn) {
+                    this.showDiffBtn.addEventListener('click', () => this.renderDiffView());
+                }
+
                 window.addEventListener('resize', this.updateMainWidth);
-                this.resizeTextarea();
-                this.updateHighlight();
+                this.resizeTextarea(this.sdpInput, this.sdpHighlight);
+                this.updateHighlight(this.sdpInput, this.highlightCode, this.sdpHighlight);
                 this.updateMainWidth();
             }
 
-            syncScroll() {
-                this.sdpHighlight.scrollTop = this.sdpInput.scrollTop;
-                this.sdpHighlight.scrollLeft = this.sdpInput.scrollLeft;
+            syncScroll(sourceInput = this.sdpInput, highlightEl = this.sdpHighlight) {
+                if (!sourceInput || !highlightEl) return;
+                highlightEl.scrollTop = sourceInput.scrollTop;
+                highlightEl.scrollLeft = sourceInput.scrollLeft;
             }
 
-            updateHighlight() {
-                const text = this.sdpInput.value;
-                this.highlightCode.textContent = text + '\n'; // Add newline to prevent layout shift
-                // Remove the highlighted flag so we can re-highlight
-                delete this.highlightCode.dataset.highlighted;
-                hljs.highlightElement(this.highlightCode);
-                this.syncScroll();
+            updateHighlight(targetInput = this.sdpInput, targetCode = this.highlightCode, highlightEl = this.sdpHighlight) {
+                if (!targetInput || !targetCode) return;
+                const text = targetInput.value;
+                targetCode.textContent = text + '\n'; // Add newline to prevent layout shift
+                delete targetCode.dataset.highlighted;
+                hljs.highlightElement(targetCode);
+                this.syncScroll(targetInput, highlightEl);
             }
 
             onInputChange() {
-                this.resizeTextarea();
-                this.updateHighlight();
+                this.resizeTextarea(this.sdpInput, this.sdpHighlight);
+                this.updateHighlight(this.sdpInput, this.highlightCode, this.sdpHighlight);
                 this.updateMainWidth();
 
                 if (this.formatTimeout) {
@@ -181,6 +292,8 @@
                     this.validationSummary.classList.add('hidden');
                     this.formatStatus.textContent = '';
                     this.lastProcessedValue = '';
+                    this.primarySdp = '';
+                    this.renderDiffView();
                     return;
                 }
 
@@ -193,10 +306,11 @@
                 this.formatTimeout = setTimeout(() => this.processInput(), 300);
             }
 
-            resizeTextarea() {
-                this.sdpInput.style.height = 'auto';
-                this.sdpInput.style.height = this.sdpInput.clientHeight + this.sdpInput.scrollHeight + this.sdpInput.offsetHeight + 'px';
-                this.sdpHighlight.style.height = this.sdpInput.style.height;
+            resizeTextarea(targetInput = this.sdpInput, highlightEl = this.sdpHighlight) {
+                if (!targetInput || !highlightEl) return;
+                targetInput.style.height = 'auto';
+                targetInput.style.height = targetInput.clientHeight + targetInput.scrollHeight + targetInput.offsetHeight + 'px';
+                highlightEl.style.height = targetInput.style.height;
             }
 
             processInput() {
@@ -204,6 +318,8 @@
                 if (!input) {
                     this.validationSummary.classList.add('hidden');
                     this.formatStatus.textContent = '';
+                    this.primarySdp = '';
+                    this.renderDiffView();
                     return;
                 }
 
@@ -212,6 +328,8 @@
                 if (!parseResult.success) {
                     this.formatStatus.textContent = 'Invalid format';
                     this.validationSummary.classList.add('hidden');
+                    this.primarySdp = '';
+                    this.renderDiffView();
                     return;
                 }
 
@@ -221,15 +339,269 @@
                 const cursorPos = this.sdpInput.selectionStart;
                 this.sdpInput.value = cleanSdp;
                 this.lastProcessedValue = cleanSdp;
-                this.updateHighlight();
-                this.resizeTextarea();
+                this.updateHighlight(this.sdpInput, this.highlightCode, this.sdpHighlight);
+                this.resizeTextarea(this.sdpInput, this.sdpHighlight);
                 this.updateMainWidth();
 
                 if (cursorPos <= cleanSdp.length) {
                     this.sdpInput.setSelectionRange(cursorPos, cursorPos);
                 }
 
+                this.primarySdp = cleanSdp;
+                this.showSecondaryCard();
+                this.renderDiffView();
                 this.validate(cleanSdp, sdpType ?? 'offer');
+            }
+
+            showSecondaryCard() {
+                if (!this.secondaryCard || this.secondaryEnabled) {
+                    return;
+                }
+                this.secondaryCard.classList.remove('hidden');
+                this.secondaryEnabled = true;
+                if (this.secondaryStatus) {
+                    this.secondaryStatus.textContent = 'Paste another SDP to compare.';
+                }
+                this.resizeTextarea(this.secondaryInput, this.secondaryHighlight);
+                this.updateHighlight(this.secondaryInput, this.secondaryHighlightCode, this.secondaryHighlight);
+            }
+
+            onSecondaryInputChange() {
+                if (!this.secondaryInput) return;
+
+                this.resizeTextarea(this.secondaryInput, this.secondaryHighlight);
+                this.updateHighlight(this.secondaryInput, this.secondaryHighlightCode, this.secondaryHighlight);
+
+                if (this.secondaryFormatTimeout) {
+                    clearTimeout(this.secondaryFormatTimeout);
+                }
+
+                const currentValue = this.secondaryInput.value.trim();
+
+                if (!currentValue) {
+                    if (this.secondaryStatus) this.secondaryStatus.textContent = '';
+                    this.secondaryLastProcessedValue = '';
+                    this.secondarySdp = '';
+                    this.renderDiffView();
+                    return;
+                }
+
+                if (currentValue === this.secondaryLastProcessedValue) {
+                    return;
+                }
+
+                if (this.secondaryStatus) this.secondaryStatus.textContent = 'Parsing...';
+
+                this.secondaryFormatTimeout = setTimeout(() => this.processSecondaryInput(), 300);
+            }
+
+            processSecondaryInput() {
+                if (!this.secondaryInput) return;
+
+                const input = this.secondaryInput.value.trim();
+                if (!input) {
+                    if (this.secondaryStatus) this.secondaryStatus.textContent = '';
+                    this.secondarySdp = '';
+                    this.renderDiffView();
+                    return;
+                }
+
+                const parseResult = this.parseInput(input);
+
+                if (!parseResult.success) {
+                    if (this.secondaryStatus) this.secondaryStatus.textContent = 'Invalid format';
+                    this.secondarySdp = '';
+                    this.renderDiffView();
+                    return;
+                }
+
+                if (this.secondaryStatus) {
+                    this.secondaryStatus.textContent = `Detected: ${parseResult.format}`;
+                }
+
+                const cleanSdp = parseResult.sdp;
+                const cursorPos = this.secondaryInput.selectionStart;
+                this.secondaryInput.value = cleanSdp;
+                this.secondaryLastProcessedValue = cleanSdp;
+                this.updateHighlight(this.secondaryInput, this.secondaryHighlightCode, this.secondaryHighlight);
+                this.resizeTextarea(this.secondaryInput, this.secondaryHighlight);
+
+                if (cursorPos <= cleanSdp.length) {
+                    this.secondaryInput.setSelectionRange(cursorPos, cursorPos);
+                }
+
+                this.secondarySdp = cleanSdp;
+                this.renderDiffView();
+            }
+
+            renderDiffView() {
+                if (!this.diffOutput || !this.formatterShell || !this.fullDiffView) {
+                    return;
+                }
+
+                if (this.showDiffBtn) {
+                    if (this.primarySdp && this.secondarySdp) {
+                        this.showDiffBtn.classList.remove('hidden');
+                    } else {
+                        this.showDiffBtn.classList.add('hidden');
+                    }
+                }
+
+                if (this.primarySdp && this.secondarySdp) {
+                    const { html, summary } = this.buildCodecStyleDiff(this.primarySdp, this.secondarySdp);
+                    this.diffOutput.innerHTML = html;
+                    if (this.diffSubtitle) {
+                        this.diffSubtitle.textContent = summary;
+                    }
+                    this.enterDiffMode();
+                } else {
+                    this.diffOutput.innerHTML = '<div class="diff-title">SDP Diff</div><div class="text-slate-400 text-sm">Paste a comparison SDP to see the diff.</div>';
+                    if (this.diffSubtitle) {
+                        this.diffSubtitle.textContent = 'Highlighting additions, removals, and codec-specific hints.';
+                    }
+                    this.exitDiffMode();
+                }
+            }
+
+            enterDiffMode() {
+                if (this.formatterShell) {
+                    this.formatterShell.classList.add('hidden');
+                }
+                if (this.fullDiffView) {
+                    this.fullDiffView.classList.remove('hidden');
+                }
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            exitDiffMode() {
+                if (this.fullDiffView) {
+                    this.fullDiffView.classList.add('hidden');
+                }
+                if (this.formatterShell) {
+                    this.formatterShell.classList.remove('hidden');
+                }
+            }
+
+            buildCodecStyleDiff(primarySdp, comparisonSdp) {
+                const primaryLines = primarySdp.split('\n');
+                const comparisonLines = comparisonSdp.split('\n');
+                const primaryLinesByType = this.groupSdpLinesByType(primaryLines);
+                const diffParts = ['<div class="diff-title">SDP Diff (Primary → Comparison)</div>'];
+
+                const simulcastInfo = this.detectSimulcastInSdp(primarySdp);
+                const svcInfo = this.detectSvcInSdp(primarySdp);
+
+                if (simulcastInfo.detected || svcInfo.detected) {
+                    diffParts.push('<div class="bg-blue-500/10 border border-blue-500/40 text-blue-100 px-3 py-2 rounded mb-3 text-xs">');
+                    if (simulcastInfo.detected) {
+                        const ridText = simulcastInfo.rids.length ? ` (RIDs: ${simulcastInfo.rids.join(', ')})` : '';
+                        diffParts.push(`<div><strong>Simulcast detected</strong>${ridText}</div>`);
+                    }
+                    if (svcInfo.detected) {
+                        diffParts.push(`<div><strong>SVC detected</strong>${svcInfo.mode ? ` — Mode: ${svcInfo.mode}` : ''}</div>`);
+                    }
+                    diffParts.push('</div>');
+                }
+
+                let diffCount = 0;
+
+                comparisonLines.forEach(line => {
+                    if (!line.trim()) return;
+                    const key = line.split('=')[0];
+                    const primaryGroup = primaryLinesByType[key] || [];
+
+                    if (primaryGroup.length > 0) {
+                        const primaryLine = primaryGroup.shift();
+                        if (line === primaryLine) {
+                            diffParts.push(this.formatDiffLine(primaryLine, 'equal'));
+                        } else {
+                            diffParts.push(this.formatDiffLine(primaryLine, 'removed'));
+                            diffParts.push(this.formatDiffLine(line, 'added'));
+                            diffCount++;
+                        }
+                    } else {
+                        diffParts.push(this.formatDiffLine(line, 'added'));
+                        diffCount++;
+                    }
+                });
+
+                const remainingPrimary = Object.values(primaryLinesByType).flat();
+                remainingPrimary.forEach(line => {
+                    if (!line.trim()) return;
+                    diffParts.push(this.formatDiffLine(line, 'removed'));
+                    diffCount++;
+                });
+
+                if (diffCount === 0) {
+                    diffParts.push('<div class="text-sm text-secondary mt-3">SDPs match line-by-line.</div>');
+                }
+
+                return {
+                    html: diffParts.join(''),
+                    summary: diffCount === 0 ? 'No differences detected' : `${diffCount} difference${diffCount === 1 ? '' : 's'} highlighted`
+                };
+            }
+
+            formatDiffLine(line, variant = 'equal') {
+                const variantClasses = {
+                    added: 'bg-green-500/20 text-green-300',
+                    removed: 'bg-red-500/20 text-red-300',
+                    info: 'bg-blue-500/20 text-blue-200',
+                    equal: 'text-slate-400'
+                };
+                const effectiveVariant = this.isSimulcastOrSvcLine(line) ? 'info' : variant;
+                const prefix = effectiveVariant === 'added'
+                    ? '+ '
+                    : effectiveVariant === 'removed'
+                        ? '- '
+                        : '';
+                const safeLine = this.escapeHtml(line);
+                return `<div class="${variantClasses[effectiveVariant] || variantClasses.equal}">${prefix}${safeLine}</div>`;
+            }
+
+            groupSdpLinesByType(lines) {
+                const linesByType = {};
+                lines.forEach(line => {
+                    const key = line.split('=')[0];
+                    if (!linesByType[key]) {
+                        linesByType[key] = [];
+                    }
+                    linesByType[key].push(line);
+                });
+                return linesByType;
+            }
+
+            detectSimulcastInSdp(sdp) {
+                const result = { detected: false, rids: [] };
+                if (/a=simulcast:/i.test(sdp)) {
+                    result.detected = true;
+                }
+                const ridRegex = /a=rid:([a-zA-Z0-9]+)/gi;
+                let match;
+                while ((match = ridRegex.exec(sdp)) !== null) {
+                    result.detected = true;
+                    if (!result.rids.includes(match[1])) {
+                        result.rids.push(match[1]);
+                    }
+                }
+                if (/a=ssrc-group:SIM/i.test(sdp)) {
+                    result.detected = true;
+                }
+                return result;
+            }
+
+            detectSvcInSdp(sdp) {
+                const result = { detected: false, mode: 'unknown' };
+                const match = sdp.match(/scalabilityMode=([a-zA-Z0-9_]+)/i);
+                if (match) {
+                    result.detected = true;
+                    result.mode = match[1];
+                }
+                return result;
+            }
+
+            isSimulcastOrSvcLine(line) {
+                return /simulcast|rid:|scalability|ssrc-group:SIM|a=ssrc:|a=mid:|a=extmap:|msid:|scalabilityMode/i.test(line || '');
             }
 
             updateMainWidth() {
